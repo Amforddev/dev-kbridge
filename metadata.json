@@ -1,0 +1,8 @@
+{
+  "name": "DEV. KBridge",
+  "description": "Partner portal connecting capital partners and receivables platforms with interactive token minting, redemptions, and NAV tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
