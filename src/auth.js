@@ -186,6 +186,9 @@ export function signupScreen(S) {
 
   return `
   <div class="center-screen fadein" style="position:relative;padding:32px 16px">
+    <button class="btn btn-quiet btn-sm" data-act="back-gate" style="position:absolute;top:20px;left:24px;display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:var(--muted);z-index:10" title="Return to Partner Gate">
+      ${ic('back', 'icon-xs')} Return to Partner Gate
+    </button>
     <div class="auth-wrap auth-wrap-wide">
       <div class="cobrand" style="margin-bottom:18px">
         ${kLogo(34)}
@@ -326,16 +329,11 @@ export function signupScreen(S) {
       </div>
 
       <!-- Footer switch links -->
-      <div style="text-align:center;margin-top:18px;display:flex;flex-direction:column;gap:8px">
+      <div style="text-align:center;margin-top:18px">
         <div style="font-size:13.5px;color:var(--muted)">
           Already have an authorized partner account?
           <button class="btn btn-quiet btn-sm" data-act="goto-login" data-org="${s.role}" style="font-weight:600;color:var(--ink);text-decoration:underline;text-underline-offset:3px">
             Sign in here
-          </button>
-        </div>
-        <div>
-          <button class="btn btn-quiet btn-sm" data-act="back-gate">
-            ${ic('back', 'icon-xs')} Return to Partner Gate
           </button>
         </div>
       </div>
@@ -613,6 +611,9 @@ export function passwordResetScreen(S) {
 
   return `
   <div class="center-screen fadein" style="position:relative;padding:32px 16px">
+    <button class="btn btn-quiet btn-sm" data-act="back-gate" style="position:absolute;top:20px;left:24px;display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:var(--muted);z-index:10" title="Return to Partner Gate">
+      ${ic('back', 'icon-xs')} Return to Partner Gate
+    </button>
     <div class="auth-wrap">
       <div class="cobrand" style="margin-bottom:18px">
         ${kLogo(34)}
@@ -624,12 +625,6 @@ export function passwordResetScreen(S) {
           ${stepsHtml}
           ${bodyContent}
         </div>
-      </div>
-
-      <div style="text-align:center;margin-top:18px">
-        <button class="btn btn-quiet btn-sm" data-act="back-gate">
-          ${ic('back', 'icon-xs')} Return to Partner Gate
-        </button>
       </div>
     </div>
   </div>`;
@@ -652,6 +647,9 @@ export function brandedLoginScreen(S, k) {
 
   return `
   <div class="center-screen fadein" style="position:relative;padding:32px 16px">
+    <button class="btn btn-quiet btn-sm" data-act="back-gate" style="position:absolute;top:20px;left:24px;display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:var(--muted);z-index:10" title="Return to Partner Gate">
+      ${ic('back', 'icon-xs')} Return to Partner Gate
+    </button>
     <div class="login-card">
       <div class="cobrand" style="margin-bottom:18px">
         ${kLogo(34)}
@@ -710,12 +708,6 @@ export function brandedLoginScreen(S, k) {
             </button>
           </div>
         </div>
-      </div>
-
-      <div style="text-align:center;margin-top:18px">
-        <button class="btn btn-quiet btn-sm" data-act="back-gate">
-          ${ic('back', 'icon-xs')} Use a different partner organisation
-        </button>
       </div>
     </div>
   </div>`;
