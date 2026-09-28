@@ -82,5 +82,12 @@ export function inDays(d){
 }
 export function kLogo(sz){
   const s = sz || 32;
-  return '<div class="klogo" style="width:'+s+'px;height:'+s+'px;font-size:'+Math.round(s*0.62)+'px">K</div>';
+  return `<img src="/assets/icon-amber-round.svg" class="klogo" style="width:${s}px;height:${s}px;flex:none;display:inline-block;vertical-align:middle;object-fit:contain;" alt="KBridge" />`;
 }
+
+export function kLockup(h, theme = 'light'){
+  const height = h || 32;
+  const asset = theme === 'dark' ? '/assets/lockup-on-dark.svg' : (theme === 'amber' ? '/assets/lockup-on-amber.svg' : '/assets/lockup-on-light.svg');
+  return `<img src="${asset}" class="klockup" style="height:${height}px;width:auto;flex:none;display:inline-block;vertical-align:middle;object-fit:contain;" alt="kbridge" />`;
+}
+

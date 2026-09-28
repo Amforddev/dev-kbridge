@@ -13,6 +13,7 @@ const STORAGE_KEY = 'kbridge_registered_accounts_v1';
 
 export const INITIAL_ACCOUNTS = [
   {
+    id: 'acc-cap-1',
     email: 'treasury@capitalpartner.com',
     password: 'kbridge-access',
     firstName: 'Victoria',
@@ -21,9 +22,12 @@ export const INITIAL_ACCOUNTS = [
     role: 'theoriq',
     entity: 'Capital Partner SPV',
     title: 'Managing Director, Treasury',
+    status: 'approved',
+    emailVerified: true,
     createdAt: new Date('2025-09-01').toISOString()
   },
   {
+    id: 'acc-orig-1',
     email: 'ops@originator.finance',
     password: 'kbridge-access',
     firstName: 'Marcus',
@@ -32,9 +36,12 @@ export const INITIAL_ACCOUNTS = [
     role: 'pursuit',
     entity: 'Originating Partner SPV I',
     title: 'Head of Originating & Structured Credit',
+    status: 'approved',
+    emailVerified: true,
     createdAt: new Date('2025-10-15').toISOString()
   },
   {
+    id: 'acc-admin-1',
     email: 'admin@kbridge.io',
     password: 'kbridge-access',
     firstName: 'Sarah',
@@ -43,6 +50,8 @@ export const INITIAL_ACCOUNTS = [
     role: 'kbridge',
     entity: 'KBridge Protocol Governance',
     title: 'Protocol Administrator',
+    status: 'approved',
+    emailVerified: true,
     createdAt: new Date('2025-08-01').toISOString()
   }
 ];
@@ -54,7 +63,12 @@ export function getAccounts() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_ACCOUNTS));
       return INITIAL_ACCOUNTS;
     }
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    // Ensure default initial accounts have status set
+    return parsed.map(acc => ({
+      ...acc,
+      status: acc.status || 'approved'
+    }));
   } catch (e) {
     return INITIAL_ACCOUNTS;
   }
@@ -95,13 +109,68 @@ export function registerAccount(accountData) {
   }
 
   const newAcc = {
+    id: 'reg-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
     ...accountData,
     email: clean,
+    status: 'pending_email',
+    emailVerified: false,
+    emailVerificationCode: '849201',
     createdAt: new Date().toISOString()
   };
   accounts.push(newAcc);
   saveAccounts(accounts);
   return newAcc;
+}
+
+export function verifyAccountEmail(email, code) {
+  const accounts = getAccounts();
+  const clean = email.trim().toLowerCase();
+  const index = accounts.findIndex(a => a.email.toLowerCase() === clean);
+  if (index !== -1) {
+    const acc = accounts[index];
+    if (code && acc.emailVerificationCode && code.trim() !== acc.emailVerificationCode) {
+      throw new Error('Invalid verification code. Please check your inbox or click auto-fill demo code.');
+    }
+    acc.emailVerified = true;
+    acc.status = 'pending_approval';
+    acc.emailVerifiedAt = new Date().toISOString();
+    saveAccounts(accounts);
+    return acc;
+  }
+  throw new Error('Account not found.');
+}
+
+export function approveAccount(email, adminNotes = '') {
+  const accounts = getAccounts();
+  const clean = email.trim().toLowerCase();
+  const index = accounts.findIndex(a => a.email.toLowerCase() === clean);
+  if (index !== -1) {
+    accounts[index].status = 'approved';
+    accounts[index].approvedAt = new Date().toISOString();
+    accounts[index].adminNotes = adminNotes;
+    saveAccounts(accounts);
+    return accounts[index];
+  }
+  return null;
+}
+
+export function rejectAccount(email, reason = 'Institutional criteria not met') {
+  const accounts = getAccounts();
+  const clean = email.trim().toLowerCase();
+  const index = accounts.findIndex(a => a.email.toLowerCase() === clean);
+  if (index !== -1) {
+    accounts[index].status = 'rejected';
+    accounts[index].rejectedAt = new Date().toISOString();
+    accounts[index].rejectionReason = reason;
+    saveAccounts(accounts);
+    return accounts[index];
+  }
+  return null;
+}
+
+export function getPendingAccounts() {
+  const accounts = getAccounts();
+  return accounts.filter(a => a.status === 'pending_approval' || a.status === 'pending_email');
 }
 
 /* ---------- helpers & validation ---------- */
@@ -192,7 +261,7 @@ export function signupScreen(S) {
     <div class="auth-wrap auth-wrap-wide">
       <div class="cobrand" style="margin-bottom:18px">
         ${kLogo(34)}
-        <span style="font-size:20px;font-weight:600;letter-spacing:-.02em">kbridge</span>
+        <span style="font-size:20px;font-weight:600;letter-spacing:-.02em"><span style="color:#ebb03f">k</span>bridge</span>
       </div>
 
       <div class="card" style="border-radius:var(--r-xl);overflow:hidden">
@@ -617,7 +686,7 @@ export function passwordResetScreen(S) {
     <div class="auth-wrap">
       <div class="cobrand" style="margin-bottom:18px">
         ${kLogo(34)}
-        <span style="font-size:20px;font-weight:600;letter-spacing:-.02em">kbridge</span>
+        <span style="font-size:20px;font-weight:600;letter-spacing:-.02em"><span style="color:#ebb03f">k</span>bridge</span>
       </div>
 
       <div class="card" style="border-radius:var(--r-xl);overflow:hidden">
@@ -653,7 +722,7 @@ export function brandedLoginScreen(S, k) {
     <div class="login-card">
       <div class="cobrand" style="margin-bottom:18px">
         ${kLogo(34)}
-        <span style="font-size:20px;font-weight:600;letter-spacing:-.02em">kbridge</span>
+        <span style="font-size:20px;font-weight:600;letter-spacing:-.02em"><span style="color:#ebb03f">k</span>bridge</span>
       </div>
 
       <div class="card" style="border-radius:var(--r-xl);overflow:hidden">
@@ -747,7 +816,7 @@ export function enhancedGateScreen() {
   <div class="center-screen fadein" style="position:relative;padding:32px 16px">
     <div class="brandline" style="margin-bottom:8px">
       ${kLogo(36)}
-      <span class="name" style="font-size:24px">kbridge</span>
+      <span class="name" style="font-size:24px"><span style="color:#ebb03f">k</span>bridge</span>
     </div>
     <h1 style="font-size:26px;font-weight:600;letter-spacing:-.02em;margin-top:14px;text-align:center">
       Institutional Partner Portal
@@ -799,4 +868,241 @@ export function userAccountModal(user, S) {
       </div>
     </div>
   `;
+}
+
+/* ============================================================
+   View 6: Email Confirmation Pending Screen
+   ============================================================ */
+export function pendingEmailScreen(S) {
+  const acc = S.pendingAccount || (S.signupState ? {
+    email: S.signupState.email || 'signatory@company.com',
+    firstName: S.signupState.firstName || 'Signatory',
+    lastName: S.signupState.lastName || 'Partner',
+    role: S.signupState.role || 'theoriq',
+    entity: S.signupState.entity || 'Partner SPV',
+    dob: S.signupState.dob || '1990-01-01'
+  } : { email: 'signatory@company.com' });
+
+  const roleLabel = acc.role === 'theoriq' ? 'Capital Partner' : (acc.role === 'pursuit' ? 'Originating Partner' : 'Protocol Admin');
+
+  return `
+  <div class="center-screen fadein" style="position:relative;padding:32px 16px">
+    <button class="btn btn-quiet btn-sm" data-act="back-gate" style="position:absolute;top:20px;left:24px;display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:var(--muted);z-index:10" title="Return to Partner Gate">
+      ${ic('back', 'icon-xs')} Return to Partner Gate
+    </button>
+    <div class="auth-wrap">
+      <div class="cobrand" style="margin-bottom:18px">
+        ${kLogo(34)}
+        <span style="font-size:20px;font-weight:600;letter-spacing:-.02em"><span style="color:#ebb03f">k</span>bridge</span>
+      </div>
+
+      <div class="card" style="border-radius:var(--r-xl);overflow:hidden">
+        <div style="padding:28px 28px 24px">
+          <!-- Stepper -->
+          <div class="auth-stepper" style="margin-bottom:24px">
+            <div class="auth-step-dot done">
+              <div class="auth-step-num">${ic('check', 'icon-xs')}</div>
+              <span>Sign-Up</span>
+            </div>
+            <div class="auth-step-line done"></div>
+            <div class="auth-step-dot active">
+              <div class="auth-step-num">2</div>
+              <span>Email Verification</span>
+            </div>
+            <div class="auth-step-line"></div>
+            <div class="auth-step-dot">
+              <div class="auth-step-num">3</div>
+              <span>Admin Queue</span>
+            </div>
+          </div>
+
+          <div style="text-align:center;margin-bottom:20px">
+            <div style="width:52px;height:52px;border-radius:999px;background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE;display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px">
+              ${ic('mail', 'icon-lg')}
+            </div>
+            <h1 style="font-size:21px;font-weight:600;letter-spacing:-.02em">Verify Your Work Email</h1>
+            <p class="muted" style="font-size:13.5px;margin-top:6px;line-height:1.5">
+              We dispatched a 6-digit verification code to <b class="mono" style="color:var(--ink)">${esc(acc.email)}</b>.
+              Please confirm your email address to proceed to the KBridge Admin Approval Queue.
+            </p>
+          </div>
+
+          <div class="panel" style="margin-bottom:18px;background:#FAF9F5">
+            <div class="kv"><span class="k">Institutional Role</span><span class="v">${roleLabel}</span></div>
+            <div class="kv"><span class="k">Corporate Entity</span><span class="v">${esc(acc.entity || 'Partner SPV')}</span></div>
+            <div class="kv"><span class="k">Signatory Name</span><span class="v">${esc(acc.firstName)} ${esc(acc.lastName)}</span></div>
+            <div class="kv"><span class="k">Verification Code Sent</span><span class="v mono" style="color:var(--ok)">849201</span></div>
+          </div>
+
+          <div class="stack gap16" style="gap: 16px; margin-top: 20px;">
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <span style="font-size: 13px; font-weight: 500; color: var(--ink-2);">Enter 6-Digit Verification Code</span>
+              <div class="row gap8" style="display: flex; gap: 8px; align-items: center;">
+                <input class="input mono" type="text" id="emailVerifyCodeInput" placeholder="849201" maxlength="6" style="font-size:18px;letter-spacing:4px;text-align:center;font-weight:600;flex: 1;min-width: 0;">
+                <button class="btn btn-ghost" type="button" data-act="autofill-email-code" style="white-space:nowrap;font-size:12.5px;height: 42px;" title="Fill demo code">
+                  Auto-fill (849201)
+                </button>
+              </div>
+            </div>
+
+            <button class="btn btn-primary btn-block" style="padding:12px;font-size:14px;height: 44px;display: flex;align-items: center;justify-content: center;gap: 8px;" type="button" data-act="submit-email-verify" data-email="${esc(acc.email)}">
+              ${ic('shieldCheck', 'icon-sm')} Verify Email &amp; Submit for Admin Review
+            </button>
+
+            <button class="btn btn-ghost btn-block" style="padding:10px;font-size:13px;color:var(--muted);height: 42px;display: flex;align-items: center;justify-content: center;gap: 8px;" type="button" data-act="quick-verify-email-link" data-email="${esc(acc.email)}">
+              ${ic('mail', 'icon-xs')} Simulate 1-Click Email Confirmation Link
+            </button>
+          </div>
+
+          <div style="margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; gap: 12px;">
+            <span class="muted" style="font-size: 13px;">Didn't receive the verification email?</span>
+            <div style="display: flex; gap: 8px; justify-content: center; width: 100%;">
+              <button class="btn btn-ghost btn-sm" data-act="resend-email-code" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--ink-2); flex: 1; justify-content: center; height: 36px; font-size: 12px;">
+                ${ic('refresh', 'icon-xs')} Resend Code
+              </button>
+              <button class="btn btn-ghost btn-sm" data-act="goto-signup" data-role="${acc.role || 'theoriq'}" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 500; color: var(--muted); flex: 1; justify-content: center; height: 36px; font-size: 12px;">
+                ${ic('pencil', 'icon-xs')} Change Email
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   View 7: Admin Approval Queue Pending Screen for New Sign-ups
+   ============================================================ */
+export function pendingApprovalScreen(S) {
+  const acc = S.pendingAccount || findAccountByEmail(S.signupState?.email) || {
+    email: S.signupState?.email || 'signatory@company.com',
+    firstName: S.signupState?.firstName || 'Signatory',
+    lastName: S.signupState?.lastName || 'Partner',
+    role: S.signupState?.role || 'theoriq',
+    entity: S.signupState?.entity || 'Partner SPV',
+    dob: S.signupState?.dob || '1990-01-01',
+    createdAt: new Date().toISOString()
+  };
+
+  const currentAcc = findAccountByEmail(acc.email) || acc;
+
+  // Check if status changed to approved
+  if (currentAcc.status === 'approved') {
+    return `
+    <div class="center-screen fadein" style="position:relative;padding:32px 16px">
+      <div class="auth-wrap">
+        <div class="cobrand" style="margin-bottom:18px">${kLogo(34)}<span style="font-size:20px;font-weight:600"><span style="color:#ebb03f">k</span>bridge</span></div>
+        <div class="card" style="border-radius:var(--r-xl);overflow:hidden;padding:32px;text-align:center">
+          <div style="width:56px;height:56px;border-radius:999px;background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok-line);display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px">
+            ${ic('check', 'icon-lg')}
+          </div>
+          <h1 style="font-size:22px;font-weight:600">Account Approved!</h1>
+          <p class="muted" style="font-size:14px;margin-top:8px">Your signatory application for <b>${esc(currentAcc.entity || 'Partner SPV')}</b> was approved by KBridge Governance.</p>
+          <button class="btn btn-primary btn-block" style="margin-top:20px;padding:12px" data-act="pending-approved-login" data-email="${esc(currentAcc.email)}">
+            ${ic('lock', 'icon-sm')} Enter Authorized Workspace
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  const roleLabel = currentAcc.role === 'theoriq' ? 'Capital Partner' : (currentAcc.role === 'pursuit' ? 'Originating Partner' : 'Protocol Admin');
+  const age = calculateAge(currentAcc.dob);
+
+  return `
+  <div class="center-screen fadein" style="position:relative;padding:32px 16px">
+    <button class="btn btn-quiet btn-sm" data-act="back-gate" style="position:absolute;top:20px;left:24px;display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:var(--muted);z-index:10" title="Return to Partner Gate">
+      ${ic('back', 'icon-xs')} Return to Partner Gate
+    </button>
+    <div class="auth-wrap auth-wrap-wide">
+      <div class="cobrand" style="margin-bottom:18px">
+        ${kLogo(34)}
+        <span style="font-size:20px;font-weight:600;letter-spacing:-.02em"><span style="color:#ebb03f">k</span>bridge</span>
+      </div>
+
+      <div class="card" style="border-radius:var(--r-xl);overflow:hidden">
+        <div style="padding:28px 32px">
+          <!-- Stepper -->
+          <div class="auth-stepper" style="margin-bottom:24px">
+            <div class="auth-step-dot done">
+              <div class="auth-step-num">${ic('check', 'icon-xs')}</div>
+              <span>Sign-Up</span>
+            </div>
+            <div class="auth-step-line done"></div>
+            <div class="auth-step-dot done">
+              <div class="auth-step-num">${ic('check', 'icon-xs')}</div>
+              <span>Email Verified</span>
+            </div>
+            <div class="auth-step-line done"></div>
+            <div class="auth-step-dot active">
+              <div class="auth-step-num">3</div>
+              <span>Admin Review</span>
+            </div>
+          </div>
+
+          <div style="text-align:center;margin-bottom:22px">
+            <div style="display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:#FFFBEB;border:1px solid #FCD34D;border-radius:999px;margin-bottom:12px;color:#B45309;font-size:12.5px;font-weight:600">
+              <span class="dot-pulse" style="width:8px;height:8px;border-radius:999px;background:#D97706;display:inline-block"></span>
+              Admin Approval Queue · Pending Governance Review
+            </div>
+            <h1 style="font-size:22px;font-weight:600;letter-spacing:-.02em">Sign-up Submitted to KBridge Admin Queue</h1>
+            <p class="muted" style="font-size:13.5px;margin-top:6px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.55">
+              Your institutional signatory application for <strong>${esc(currentAcc.entity || roleLabel)}</strong> is queued for review by KBridge Protocol Administrators.
+            </p>
+          </div>
+
+          <!-- Application Details Summary -->
+          <div style="background:#FAF9F5;border:1px solid var(--line-soft);border-radius:var(--r-lg);padding:18px 20px;margin-bottom:22px">
+            <div class="between" style="border-bottom:1px solid var(--line-soft);padding-bottom:10px;margin-bottom:12px">
+              <div class="row gap8">
+                ${ic('shieldCheck', 'icon-sm')}
+                <span style="font-weight:600;font-size:13.5px">Signatory KYC &amp; Verification Audit</span>
+              </div>
+              <span class="badge b-amber"><span class="dot"></span>Queue Ref: ${currentAcc.id || 'REG-PENDING'}</span>
+            </div>
+
+            <div class="two-col" style="gap:12px 24px">
+              <div class="kv"><span class="k">Signatory Name</span><span class="v">${esc(currentAcc.firstName)} ${esc(currentAcc.lastName)}</span></div>
+              <div class="kv"><span class="k">Work Email</span><span class="v mono">${esc(currentAcc.email)} <span class="badge b-green" style="font-size:10px;padding:0 5px">Verified ✓</span></span></div>
+              <div class="kv"><span class="k">Workspace Role</span><span class="v">${roleLabel}</span></div>
+              <div class="kv"><span class="k">Corporate Entity SPV</span><span class="v">${esc(currentAcc.entity || 'Partner SPV')}</span></div>
+              <div class="kv"><span class="k">DOB &amp; KYC Age</span><span class="v mono">${esc(currentAcc.dob || '—')} (${age ? age + ' yrs · Authorized' : '18+'})</span></div>
+              <div class="kv"><span class="k">Submission Time</span><span class="v mono">${currentAcc.createdAt ? new Date(currentAcc.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'Just now'}</span></div>
+            </div>
+          </div>
+
+          <!-- Actions & Demo Shortcuts -->
+          <div class="stack gap12">
+            <button class="btn btn-primary btn-block" style="padding:11px;font-size:14px" type="button" data-act="check-approval-status" data-email="${esc(currentAcc.email)}">
+              ${ic('refresh', 'icon-sm')} Refresh / Check Approval Status
+            </button>
+
+            <div style="background:#F0FDF4;border:1px dashed #86EFAC;border-radius:var(--r);padding:12px 14px;margin-top:4px">
+              <div class="between" style="align-items:center">
+                <div>
+                  <div style="font-size:12.5px;font-weight:600;color:#166534">Fast Demo Testing Actions</div>
+                  <div style="font-size:11.5px;color:#15803D;margin-top:2px">Test approval instantly or log in to the Admin Portal to manage the queue</div>
+                </div>
+                <div class="row gap8">
+                  <button class="btn btn-sm" style="background:#16A34A;color:#fff;border:none;font-weight:600" type="button" data-act="demo-quick-approve" data-email="${esc(currentAcc.email)}">
+                    ${ic('check', 'icon-xs')} Instant Approve
+                  </button>
+                  <button class="btn btn-ghost btn-sm" style="color:#166534;border-color:#86EFAC" type="button" data-act="demo-switch-to-admin">
+                    ${ic('shield', 'icon-xs')} Admin Console
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div style="text-align:center;margin-top:8px">
+              <button class="btn btn-quiet btn-sm" data-act="back-gate" style="color:var(--muted)">
+                ${ic('back', 'icon-xs')} Return to Partner Gate
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
 }

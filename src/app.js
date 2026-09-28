@@ -4,8 +4,10 @@ import { INITIAL_MINT_REQUESTS, mintStatusBadge, pipelineStepper, viewAdminDashb
 import { openRequestNotesModal, openUploadNotesModal, openInspectAndMintModal, openRequestDetailsModal, renderDocChip, openDocumentPreviewModal } from './capitalModals.js';
 import {
   signupScreen, passwordResetScreen, brandedLoginScreen, enhancedGateScreen,
-  userAccountModal, getAccounts, findAccountByEmail, updateAccountPassword,
-  registerAccount, checkPasswordStrength, calculateAge, INITIAL_ACCOUNTS
+  pendingEmailScreen, pendingApprovalScreen, userAccountModal, getAccounts,
+  findAccountByEmail, updateAccountPassword, registerAccount, verifyAccountEmail,
+  approveAccount, rejectAccount, getPendingAccounts, checkPasswordStrength,
+  calculateAge, INITIAL_ACCOUNTS
 } from './auth.js';
 
 /* ============================================================
@@ -535,7 +537,7 @@ export function header(){
     <div class="hbar">
       <div class="row" style="align-items:center">
         <div class="brandline" style="cursor:pointer" data-act="view" data-view="dash">
-          ${kLogo(30)}<span class="name">kbridge</span>
+          ${kLogo(30)}<span class="name"><span style="color:#ebb03f">k</span>bridge</span>
         </div>
         <nav class="nav" style="margin-left:24px">${tabs()}</nav>
         <span class="divider-v hide-sm" style="height:16px;margin-left:16px;border-left:1px solid var(--line)"></span>
@@ -602,7 +604,7 @@ export function balancesCard(){
 }
 export function quickActions(items){
   return `<div class="card">
-    <div class="card-head"><h3>${ic('zap','icon-sm')} Quick actions</h3></div>
+    <div class="card-head"><h3>${ic('grid','icon-sm')} Quick actions</h3></div>
     <div>${items.map(([act, label, sub, dis, data]) => `
       <button class="wrow" style="width:100%;text-align:left" data-act="${act}" ${data||''} ${dis?'disabled':''}>
         <div><div style="font-size:13.5px;font-weight:500;color:${dis?'var(--faint)':'var(--ink)'}">${label}</div>
@@ -1943,16 +1945,14 @@ export function handleSignupSubmit(){
       });
 
       s.loading = false;
-      S.currentUser = newAcc;
-      S.org = s.role;
-      S.authMode = 'dash';
-      S.view = 'dash';
+      S.pendingAccount = newAcc;
+      S.authMode = 'pending-email';
       render();
 
-      toast.success(
-        `Welcome to KBridge, ${firstName}!`,
-        `Account registered as ${s.role === 'theoriq' ? 'Capital Partner' : (s.role === 'pursuit' ? 'Originating Partner' : 'Protocol Administrator')}. KYC verified.`,
-        'shield'
+      toast.info(
+        `Email Confirmation Required`,
+        `Verification security code sent to ${email}.`,
+        'mail'
       );
     } catch (err) {
       s.loading = false;
@@ -2248,6 +2248,34 @@ export function doLogin(){
         toast.error('Incorrect password', 'Please enter the correct password or click "Forgot password?" to reset it.', 'alert');
         return;
       }
+
+      if (found.status === 'pending_email') {
+        b.innerHTML = ic('lock','icon-sm') + ' Sign in to Portal';
+        b.disabled = false;
+        S.pendingAccount = found;
+        S.authMode = 'pending-email';
+        render();
+        toast.info('Email verification required', `Check ${found.email} for your 6-digit confirmation code.`, 'mail');
+        return;
+      }
+
+      if (found.status === 'pending_approval') {
+        b.innerHTML = ic('lock','icon-sm') + ' Sign in to Portal';
+        b.disabled = false;
+        S.pendingAccount = found;
+        S.authMode = 'pending-approval';
+        render();
+        toast.info('Admin approval pending', 'Your application is queued for KBridge Protocol Governance review.', 'clock');
+        return;
+      }
+
+      if (found.status === 'rejected') {
+        b.innerHTML = ic('lock','icon-sm') + ' Sign in to Portal';
+        b.disabled = false;
+        toast.error('Application Rejected', found.rejectionReason || 'Institutional criteria not met.', 'alert');
+        return;
+      }
+
       S.currentUser = found;
       S.org = found.role || S.gateOrg || 'theoriq';
     } else {
@@ -2282,6 +2310,14 @@ export function render(){
     if (S.authMode === 'signup') {
       root.innerHTML = signupScreen(S);
       attachSignupEvents();
+      return;
+    }
+    if (S.authMode === 'pending-email') {
+      root.innerHTML = pendingEmailScreen(S);
+      return;
+    }
+    if (S.authMode === 'pending-approval') {
+      root.innerHTML = pendingApprovalScreen(S);
       return;
     }
     if (S.authMode === 'reset-password') {
@@ -2405,6 +2441,130 @@ document.addEventListener('click', e => {
   }
   else if (a === 'submit-signup'){
     handleSignupSubmit();
+  }
+  else if (a === 'autofill-email-code'){
+    const inp = document.getElementById('emailVerifyCodeInput');
+    if (inp) inp.value = '849201';
+  }
+  else if (a === 'submit-email-verify'){
+    const email = t.dataset.email || S.pendingAccount?.email;
+    const inp = document.getElementById('emailVerifyCodeInput');
+    const code = inp ? inp.value.trim() : '849201';
+    try {
+      const updated = verifyAccountEmail(email, code);
+      S.pendingAccount = updated;
+      S.authMode = 'pending-approval';
+      render();
+      toast.success('Email Verified!', 'Application submitted to KBridge Admin Approval Queue.', 'check');
+    } catch (err) {
+      toast.error('Verification failed', err.message || 'Invalid code', 'alert');
+    }
+  }
+  else if (a === 'quick-verify-email-link'){
+    const email = t.dataset.email || S.pendingAccount?.email;
+    try {
+      const updated = verifyAccountEmail(email, '849201');
+      S.pendingAccount = updated;
+      S.authMode = 'pending-approval';
+      render();
+      toast.success('1-Click Email Verified!', 'Application submitted to KBridge Admin Approval Queue.', 'check');
+    } catch (err) {
+      toast.error('Verification failed', err.message, 'alert');
+    }
+  }
+  else if (a === 'resend-email-code'){
+    toast.info('New verification code dispatched', 'Check your corporate email inbox.', 'mail');
+  }
+  else if (a === 'check-approval-status'){
+    const email = t.dataset.email || S.pendingAccount?.email;
+    const acc = findAccountByEmail(email);
+    if (acc && acc.status === 'approved') {
+      S.pendingAccount = null;
+      S.currentUser = acc;
+      S.org = acc.role;
+      S.authMode = 'dash';
+      S.view = 'dash';
+      render();
+      toast.success('Application Approved!', `Welcome to the ${ORGS[acc.role]?.name} workspace.`, 'shieldCheck');
+    } else {
+      render();
+      toast.info('Status checked', 'Application is still queued for KBridge Governance review.', 'clock');
+    }
+  }
+  else if (a === 'pending-approved-login'){
+    const email = t.dataset.email || S.pendingAccount?.email;
+    const acc = findAccountByEmail(email);
+    if (acc) {
+      S.pendingAccount = null;
+      S.currentUser = acc;
+      S.org = acc.role;
+      S.authMode = 'dash';
+      S.view = 'dash';
+      render();
+      toast.success('Signed in as ' + acc.firstName, ORGS[acc.role]?.name, 'check');
+    }
+  }
+  else if (a === 'demo-quick-approve'){
+    const email = t.dataset.email || S.pendingAccount?.email;
+    const acc = approveAccount(email, 'Approved via fast demo action');
+    if (acc) {
+      S.pendingAccount = null;
+      S.currentUser = acc;
+      S.org = acc.role;
+      S.authMode = 'dash';
+      S.view = 'dash';
+      render();
+      toast.success('Account Approved!', `Instant approval granted. Entered ${ORGS[acc.role]?.name} workspace.`, 'shieldCheck');
+    }
+  }
+  else if (a === 'demo-switch-to-admin'){
+    S.pendingAccount = null;
+    S.org = 'kbridge';
+    S.currentUser = findAccountByEmail('admin@kbridge.io');
+    S.authMode = 'dash';
+    S.view = 'dash';
+    render();
+    toast.info('Switched to KBridge Admin View', 'You can now review pending sign-ups in the Admin Approval Queue.', 'shield');
+  }
+  else if (a === 'admin-approve-acc'){
+    const email = t.dataset.email;
+    const updated = approveAccount(email, 'Approved by KBridge Protocol Governance Admin');
+    if (updated) {
+      render();
+      toast.success('Account Approved', `Signatory access granted for ${updated.firstName} ${updated.lastName} (${updated.email}).`, 'check');
+    }
+  }
+  else if (a === 'admin-reject-acc'){
+    const email = t.dataset.email;
+    const acc = findAccountByEmail(email);
+    openModal(modalShell('Reject Partner Sign-up Application', `Signatory: ${acc ? acc.firstName + ' ' + acc.lastName : email}`, 'alert',
+      `<div class="callout c-red">${ic('alert','icon-sm')}<div>This will reject the signatory request and prevent portal sign-in.</div></div>
+       <label class="field" style="margin-top:14px">
+         <span>Reason for Rejection</span>
+         <input class="input" type="text" id="rejReasonInput" value="Institutional eligibility requirements not satisfied." placeholder="e.g. Unverified corporate domain">
+       </label>`,
+      `<button class="btn btn-ghost" data-act="close">Cancel</button>
+       <button class="btn btn-danger" data-act="admin-confirm-reject-acc" data-email="${esc(email)}">${ic('trash','icon-xs')} Confirm Rejection</button>`
+    ));
+  }
+  else if (a === 'admin-confirm-reject-acc'){
+    const email = t.dataset.email;
+    const inp = document.getElementById('rejReasonInput');
+    const reason = inp ? inp.value.trim() : 'Institutional eligibility requirements not satisfied.';
+    rejectAccount(email, reason);
+    closeModal();
+    render();
+    toast.warn('Application Rejected', `Account application for ${email} was rejected.`, 'trash');
+  }
+  else if (a === 'admin-view-acc-audit'){
+    const email = t.dataset.email;
+    const acc = findAccountByEmail(email);
+    if (acc) {
+      openModal(modalShell('Signatory Audit & Governance Record', `KBridge Protocol Security Audit`, 'shieldCheck',
+        userAccountModal(acc, S),
+        `<button class="btn btn-primary" data-act="close">Close Audit Log</button>`
+      ));
+    }
   }
   else if (a === 'goto-login'){
     S.authMode = 'login';

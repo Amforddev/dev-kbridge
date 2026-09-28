@@ -422,7 +422,7 @@ export function openInspectAndMintModal(reqId, S, ctx) {
   const foot = `
     <button class="btn btn-ghost" data-act="close">Cancel</button>
     <button class="btn btn-primary" id="btnExecuteHederaMint">
-      ${ic('zap', 'icon-sm')} Mint Tokens &amp; Transfer Funds on Hedera
+      ${ic('coins', 'icon-sm')} Mint Tokens &amp; Transfer Funds on Hedera
     </button>
   `;
 
@@ -476,7 +476,7 @@ export function openInspectAndMintModal(reqId, S, ctx) {
         }
       ];
 
-      ctx.openModal(ctx.modalShell('Executing Hedera Settlement', `${nf(r.amt, 2)} USDC → ${nf(r.tokens, 2)} ${p.symbol}`, 'zap', '<div class="steps"></div>', ''));
+      ctx.openModal(ctx.modalShell('Executing Hedera Settlement', `${nf(r.amt, 2)} USDC → ${nf(r.tokens, 2)} ${p.symbol}`, 'refresh', '<div class="steps"></div>', ''));
       ctx.execSteps(steps, () => {
         ctx.openModal(ctx.modalShell('Settlement Completed', 'Tokens minted & funds transferred on Hedera', 'check',
           ctx.successBlock(`Capital Request ${r.id} Completed`, [

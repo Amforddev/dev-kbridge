@@ -1,5 +1,6 @@
 import { ic, spinner, hash, uid, dstr, dshort, ago, inDays, nf, nav, pct, short, esc, TODAY, kLogo } from './helpers.js';
 import { HEDERA_LOGO, HEDERA_MARK } from './assets.js';
+import { getAccounts, getPendingAccounts, calculateAge } from './auth.js';
 
 export const INITIAL_MINT_REQUESTS = [
   {
@@ -184,6 +185,21 @@ export function viewAdminDashboard(S, ctx) {
   const totalCap = all.reduce((a, r) => a + r.amt, 0);
   const totalSettled = pDone.reduce((a, r) => a + r.amt, 0);
 
+  const pendingAccounts = getPendingAccounts();
+  const accounts = getAccounts().filter(a => a.role !== 'kbridge');
+
+  const signupQueueAlert = pendingAccounts.length ? `
+    <div class="callout c-amber" style="margin-bottom:22px;align-items:center;justify-content:space-between">
+      <div class="row gap12">
+        <span class="dot-pulse" style="width:10px;height:10px;border-radius:999px;background:#D97706;display:inline-block"></span>
+        <div>
+          <b>Sign-up Approval Queue Action Required:</b> 
+          ${pendingAccounts.length} new institutional partner signatory application(s) awaiting KBridge Governance review.
+        </div>
+      </div>
+      <a href="#approval-queue" class="btn btn-primary btn-sm">${ic('shieldCheck', 'icon-xs')} Review Applications (${pendingAccounts.length})</a>
+    </div>` : '';
+
   const pendingAlert = pMint.length ? `
     <div class="callout c-green" style="margin-bottom:22px;align-items:center;justify-content:space-between">
       <div class="row gap8">
@@ -203,6 +219,63 @@ export function viewAdminDashboard(S, ctx) {
         </div>
       </div>
     </div>` : '');
+
+  const queueRows = accounts.map(a => {
+    let statusBadge = `<span class="badge b-green"><span class="dot"></span>Approved Signatory</span>`;
+    if (a.status === 'pending_email') {
+      statusBadge = `<span class="badge b-amber">${ic('mail', 'icon-xs')} Email Unverified</span>`;
+    } else if (a.status === 'pending_approval') {
+      statusBadge = `<span class="badge b-amber"><span class="dot"></span>Pending Governance Review</span>`;
+    } else if (a.status === 'rejected') {
+      statusBadge = `<span class="badge b-red">${ic('alert', 'icon-xs')} Rejected</span>`;
+    }
+
+    const roleName = a.role === 'theoriq' ? 'Capital Partner' : (a.role === 'pursuit' ? 'Originating Partner' : 'Protocol Admin');
+    const age = calculateAge(a.dob);
+
+    let actionBtns = '';
+    if (a.status === 'pending_approval' || a.status === 'pending_email') {
+      actionBtns = `
+        <div class="row gap6" style="justify-content:flex-end">
+          <button class="btn btn-primary btn-sm" data-act="admin-approve-acc" data-email="${esc(a.email)}">
+            ${ic('check', 'icon-xs')} Approve
+          </button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--bad)" data-act="admin-reject-acc" data-email="${esc(a.email)}">
+            ${ic('trash', 'icon-xs')} Reject
+          </button>
+        </div>`;
+    } else if (a.status === 'approved') {
+      actionBtns = `
+        <div class="row gap6" style="justify-content:flex-end">
+          <button class="btn btn-ghost btn-sm" data-act="admin-view-acc-audit" data-email="${esc(a.email)}">
+            ${ic('fileCheck', 'icon-xs')} Audit Log
+          </button>
+        </div>`;
+    } else if (a.status === 'rejected') {
+      actionBtns = `
+        <div class="row gap6" style="justify-content:flex-end">
+          <button class="btn btn-ghost btn-sm" data-act="admin-approve-acc" data-email="${esc(a.email)}">
+            ${ic('refresh', 'icon-xs')} Re-approve
+          </button>
+        </div>`;
+    }
+
+    return `<tr class="hover-row">
+      <td>
+        <div style="font-weight:600;font-size:13.5px">${esc(a.firstName)} ${esc(a.lastName)}</div>
+        <div class="faint" style="font-size:11.5px">${esc(a.title || 'Signatory')}</div>
+      </td>
+      <td class="mono" style="font-size:12.5px">${esc(a.email)}</td>
+      <td>
+        <div><span class="partner-pill">${roleName}</span></div>
+        <div class="faint" style="font-size:11px;margin-top:2px">${esc(a.entity || 'Partner SPV')}</div>
+      </td>
+      <td class="mono" style="font-size:12px">${esc(a.dob || '—')} ${age ? `<span class="faint">(${age}y)</span>` : ''}</td>
+      <td class="mono" style="font-size:12px">${a.createdAt ? dshort(a.createdAt) : '—'}</td>
+      <td>${statusBadge}</td>
+      <td class="t-right">${actionBtns}</td>
+    </tr>`;
+  }).join('');
 
   const tableRows = all.map(r => {
     const p = ctx.PL(r.pf);
@@ -236,8 +309,8 @@ export function viewAdminDashboard(S, ctx) {
   return `
     <div style="background:#0F172A;color:#fff;padding:16px 20px;border-radius:var(--r-lg);margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
       <div class="row gap12">
-        <div style="width:36px;height:36px;border-radius:8px;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center">
-          ${ic('shield', 'icon-sm')}
+        <div style="width:36px;height:36px;border-radius:8px;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center">
+          <img src="/assets/bridge-amber.svg" style="width:22px;height:22px;object-fit:contain;" alt="KBridge" />
         </div>
         <div>
           <div style="font-weight:600;font-size:15px;letter-spacing:-.01em">KBridge Admin Console</div>
@@ -246,6 +319,7 @@ export function viewAdminDashboard(S, ctx) {
       </div>
     </div>
 
+    ${signupQueueAlert}
     ${pendingAlert}
 
     <div class="stats" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
@@ -260,14 +334,48 @@ export function viewAdminDashboard(S, ctx) {
         <div class="sub">Auto-notified for documents</div>
       </div>
       <div class="card card-pad stat">
-        <div class="label">${ic('fileCheck', 'icon-sm')} Verified &amp; Ready</div>
-        <div class="value mono pos">${pMint.length}</div>
-        <div class="sub">${nf(pMint.reduce((a,r)=>a+r.amt,0),0)} USDC waiting to execute</div>
+        <div class="label">${ic('shieldCheck', 'icon-sm')} Pending Approval Queue</div>
+        <div class="value mono ${pendingAccounts.length ? 'warn' : ''}">${pendingAccounts.length}</div>
+        <div class="sub">${accounts.length} total registered signatories</div>
       </div>
       <div class="card card-pad stat">
         <div class="label">${ic('check', 'icon-sm')} Minted &amp; Settled</div>
         <div class="value mono">${nf(totalSettled, 0)} <span style="font-size:14px;color:var(--muted)">USDC</span></div>
         <div class="sub">${pDone.length} completed transactions</div>
+      </div>
+    </div>
+
+    <!-- Sign-up Approval Queue Section -->
+    <div class="card" id="approval-queue" style="margin-bottom:24px">
+      <div class="card-head">
+        <div class="row gap10">
+          ${ic('shieldCheck', 'icon-sm')}
+          <div>
+            <h3 style="margin:0;font-size:15px;font-weight:600">Sign-up Approval Queue &amp; Signatory Directory</h3>
+            <div class="faint" style="font-size:12px;margin-top:2px">Manage incoming partner applications, verify corporate KYC, and approve portal access</div>
+          </div>
+        </div>
+        <div class="row gap8">
+          ${pendingAccounts.length ? `<span class="badge b-amber"><span class="dot"></span>${pendingAccounts.length} Pending Review</span>` : `<span class="badge b-green"><span class="dot"></span>All Signatories Audited</span>`}
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Signatory Name &amp; Title</th>
+              <th>Work Email</th>
+              <th>Workspace &amp; Entity SPV</th>
+              <th>DOB / Age</th>
+              <th>Submitted</th>
+              <th>Status</th>
+              <th class="t-right">Governance Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${queueRows}
+          </tbody>
+        </table>
       </div>
     </div>
 

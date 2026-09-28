@@ -39,4 +39,21 @@ export const HEDERA_LOGO = `<img src="https://mma.prnewswire.com/media/1671157/H
 
 export const HEDERA_MARK = `<img src="https://mma.prnewswire.com/media/1671157/Hedera_Black_Logo.jpg?p=twitter" alt="Hedera" referrerpolicy="no-referrer" style="height:22px;width:auto;object-fit:contain;mix-blend-mode:multiply;display:inline-block;vertical-align:middle">`;
 
-export const LOGO = {};
+export const LOGO = {
+  iconAmberRound: '/assets/icon-amber-round.svg',
+  iconAmber: '/assets/icon-amber.svg',
+  iconNavy: '/assets/icon-navy.svg',
+  lockupLight: '/assets/lockup-on-light.svg',
+  lockupDark: '/assets/lockup-on-dark.svg',
+  lockupAmber: '/assets/lockup-on-amber.svg',
+  bridgeAmber: '/assets/bridge-amber.svg',
+  bridgeNavy: '/assets/bridge-navy.svg',
+  bridgeWhite: '/assets/bridge-white.svg',
+  tokenPrimary: '/assets/token-primary.svg',
+  tokenConstruction: '/assets/token-construction.svg',
+  tokenInverse: '/assets/token-inverse.svg',
+  tokenMonoNavy: '/assets/token-mono-navy.svg',
+};
+
+export const KBRIDGE_ASSETS = LOGO;
+
