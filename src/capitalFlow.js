@@ -379,6 +379,58 @@ export function viewAdminDashboard(S, ctx) {
       </div>
     </div>
 
+    <!-- Originating Partners Fee Exposure Card -->
+    <div class="card" style="margin-bottom:24px">
+      <div class="card-head">
+        <div class="row gap10">
+          ${ic('bank', 'icon-sm')}
+          <div>
+            <h3 style="margin:0;font-size:15px;font-weight:600">Originating Partners — Kunda Box Capital &amp; Fee Exposure</h3>
+            <div class="faint" style="font-size:12px;margin-top:2px">Real-time tracking of allocated capital and accrued administration fees (2.25% / 365 basis) across all originating platforms</div>
+          </div>
+        </div>
+        <span class="badge b-green"><span class="dot"></span>Live Protocol Audit</span>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Originating Partner &amp; SPV</th>
+              <th>Active Allocations</th>
+              <th class="t-right">Total Allocated Capital</th>
+              <th class="t-right">Accrued Kunda Box Fees</th>
+              <th class="t-right">Total Combined Owed</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${S.platforms.map(pf => {
+              const pfItems = (S.mintRequests || []).filter(r => r.pf === pf.key && (r.status === 'Completed' || r.status === 'Settled' || r.mintedAt));
+              let pfAlloc = 0;
+              let pfFees = 0;
+              pfItems.forEach(r => {
+                const allocDate = new Date(r.mintedAt || r.created || TODAY);
+                const daysSince = Math.max(1, Math.floor((TODAY.getTime() - allocDate.getTime()) / (1000 * 60 * 60 * 24)));
+                const fee = r.amt * (0.0225 / 365) * daysSince;
+                pfAlloc += r.amt;
+                pfFees += fee;
+              });
+              const pfTotal = pfAlloc + pfFees;
+              return `<tr class="hover-row">
+                <td>
+                  <div style="font-weight:600;font-size:13.5px">${esc(pf.name)}</div>
+                  <div class="faint" style="font-size:11.5px">${esc(pf.legal)}</div>
+                </td>
+                <td><span class="badge b-ink">${pfItems.length} active</span></td>
+                <td class="mono t-right" style="font-weight:600">${nf(pfAlloc, 2)} USDC</td>
+                <td class="mono t-right" style="color:var(--amber);font-weight:600">${nf(pfFees, 2)} USDC</td>
+                <td class="mono t-right" style="font-weight:600">${nf(pfTotal, 2)} USDC</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <div class="card" style="margin-bottom:24px">
       <div class="card-head">
         <h3>${ic('activity', 'icon-sm')} Capital Mint &amp; Note Coordination Pipeline</h3>
@@ -523,3 +575,104 @@ export function viewOriginatorNoteRequests(S, ctx) {
     </div>
   `;
 }
+
+/* ============================================================
+   Originator Kunda Box (KBridge) Fees & Allocated Capital Screen
+   ============================================================ */
+export function viewOriginatorKundaBoxFees(S, ctx) {
+  const activePf = S.openPlatform || 'pursuit';
+  const p = ctx.PL(activePf);
+  const orgKey = S.org || 'pursuit';
+  
+  const allocatedItems = (S.mintRequests || []).filter(r => r.pf === activePf && (r.status === 'Completed' || r.status === 'Settled' || r.mintedAt));
+  
+  let totalAllocated = 0;
+  let totalAccruedFees = 0;
+  
+  const rows = allocatedItems.length ? allocatedItems.map(r => {
+    const allocDate = new Date(r.mintedAt || r.created || TODAY);
+    const daysSince = Math.max(1, Math.floor((TODAY.getTime() - allocDate.getTime()) / (1000 * 60 * 60 * 24)));
+    const mosSince = (daysSince / 30.4375).toFixed(1);
+    const feeRateDaily = 0.0225 / 365;
+    const accruedFee = r.amt * feeRateDaily * daysSince;
+    const totalItemOwed = r.amt + accruedFee;
+    
+    totalAllocated += r.amt;
+    totalAccruedFees += accruedFee;
+    
+    return `<tr class="hover-row">
+      <td class="mono" style="font-weight:600">${r.id}</td>
+      <td>${esc(r.holder)}</td>
+      <td class="mono t-right" style="font-weight:600">${nf(r.amt, 2)} USDC</td>
+      <td class="mono">${dshort(allocDate)}<div class="faint" style="font-size:11px">${daysSince} days active (${mosSince} mos)</div></td>
+      <td class="mono t-right">2.25% p.a.</td>
+      <td class="mono t-right" style="color:var(--amber);font-weight:600">${nf(accruedFee, 2)} USDC</td>
+      <td class="mono t-right" style="font-weight:600">${nf(totalItemOwed, 2)} USDC</td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="7" style="padding:48px;text-align:center" class="muted">No allocated capital items registered yet. Items appear here automatically when capital minting completes and succeeds in wallet transfer.</td></tr>`;
+
+  const totalOwedCombined = totalAllocated + totalAccruedFees;
+  const cash = ctx.orgCash(orgKey);
+
+  const platformSelector = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;background:#fff;padding:12px 16px;border-radius:12px;border:1px solid var(--line-soft);box-shadow: 0 1px 2px rgba(0,0,0,0.05)">
+      <span class="faint" style="font-weight:600;font-size:13.5px">${ic('layers','icon-xs')} Active Originating Platform:</span>
+      <div style="width:340px;position:relative;z-index:40">
+        ${ctx.selectBox('feePlatform', S.platforms.map(x => ({ v:x.key, label:x.name + ' (' + x.symbol + ')', sub:x.legal })), activePf, v => {
+          S.openPlatform = v;
+          ctx.render();
+        })}
+      </div>
+    </div>
+  `;
+
+  return `
+    ${ctx.pageHead('Kunda Box (KBridge) Statement & Fees', 'Statement of capital allocated from partners, active duration, and accrued Kunda Box administration fees (2.25% / 365 daily accrual).', '')}
+    
+    ${platformSelector}
+
+    <div class="stats" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+      ${ctx.stat('Allocated Capital', 'coins', nf(totalAllocated, 2) + ' <span style="font-size:15px;color:var(--muted)" class="mono">USDC</span>', 'Successfully minted &amp; transferred')}
+      ${ctx.stat('Accrued Kunda Box Fees', 'trend', nf(totalAccruedFees, 2) + ' <span style="font-size:15px;color:var(--muted)" class="mono">USDC</span>', '2.25% / 365 daily accrual')}
+      ${ctx.stat('Total Owed (Capital + Fees)', 'bank', nf(totalOwedCombined, 2) + ' <span style="font-size:15px;color:var(--muted)" class="mono">USDC</span>', 'Payable to KBridge Protocol')}
+      ${ctx.stat('Originator Cash', 'wallet', nf(cash, 2) + ' <span style="font-size:15px;color:var(--muted)" class="mono">USDC</span>', 'Across funding wallets')}
+    </div>
+
+    <div class="card" style="margin-top:24px">
+      <div class="card-head">
+        <div class="row gap10">
+          ${ic('shieldCheck', 'icon-sm')}
+          <div>
+            <h3 style="margin:0;font-size:15px;font-weight:600">Allocated Capital &amp; Fee Statement (${p ? p.name : 'Platform'})</h3>
+            <div class="faint" style="font-size:12px;margin-top:2px">Calculated at (2.25% / 365) × number of days since allocation</div>
+          </div>
+        </div>
+        <span class="badge b-ink">${allocatedItems.length} active allocation(s)</span>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Allocation ID</th>
+              <th>Capital Partner</th>
+              <th class="t-right">Allocated Capital</th>
+              <th>Allocation Date &amp; Duration</th>
+              <th class="t-right">Annual Rate</th>
+              <th class="t-right">Accrued Fee</th>
+              <th class="t-right">Total Owed</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="callout c-neutral" style="margin-top:20px">
+      ${ic('info', 'icon-sm')}
+      <div style="font-size:12.5px;line-height:1.5">
+        <b>Statement Policy:</b> Items are automatically registered upon successful capital minting and wallet transfer. Fees accrue continuously at an annualized rate of 2.25% divided by 365 days, multiplied by the active days elapsed since capital allocation. This screen is for official statement reporting and recordkeeping.
+      </div>
+    </div>
+  `;
+}
+

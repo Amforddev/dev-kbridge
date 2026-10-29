@@ -1,6 +1,7 @@
 import { ic, spinner, hash, uid, dstr, dshort, ago, inDays, nf, nav, pct, short, esc, TODAY } from './helpers.js';
 import { HEDERA_LOGO, HEDERA_MARK } from './assets.js';
 import { mintStatusBadge, pipelineStepper } from './capitalFlow.js';
+import { registerAllocatedCapitalFee } from './originatorFees.js';
 
 function getDocMetadata(doc) {
   if (doc.metadata) return doc.metadata;
@@ -466,10 +467,13 @@ export function openInspectAndMintModal(reqId, S, ctx) {
               tx
             });
 
+            // Register item in Originator Kunda Box fee ledger
+            registerAllocatedCapitalFee(r, S);
+
             S.feed.unshift({
               ic: 'coins',
               tone: 'neutral',
-              text: `Capital Partner minted ${nf(r.tokens, 2)} ${p.symbol} backed by Note ${r.id}.`,
+              text: `Capital Partner minted ${nf(r.tokens, 2)} ${p.symbol} backed by Note ${r.id}. Registered in Originator Kunda Box fee ledger.`,
               at: new Date()
             });
           }
@@ -484,13 +488,14 @@ export function openInspectAndMintModal(reqId, S, ctx) {
             ['Tokens Minted', `${nf(r.tokens, 2)} ${p ? p.symbol : 'TOKENS'}`],
             ['USDC Transferred', `${nf(r.amt, 2)} USDC`],
             ['Recipient Wallet', origWallet.label || 'Pursuit Originator Wallet'],
-            ['Token Custody', tokenCustody.label || 'Theoriq Custody']
+            ['Token Custody', tokenCustody.label || 'Theoriq Custody'],
+            ['Kunda Box Facility Fee', `Accruing daily at 2.25%/365 (${nf(r.amt * 0.0225 / 365, 2)} USDC/day)`]
           ], tx),
           `<button class="btn btn-primary" data-act="close">Done</button>`
         ));
         ctx.toast.success(
           `Minted ${nf(r.tokens, 2)} ${p.symbol}`,
-          `${nf(r.amt, 2)} USDC transferred to Originating Partner`,
+          `${nf(r.amt, 2)} USDC transferred to Originating Partner · Registered in Kunda Box fee ledger`,
           'coins'
         );
       });

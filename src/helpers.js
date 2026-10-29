@@ -91,3 +91,21 @@ export function kLockup(h, theme = 'light'){
   return `<img src="${asset}" class="klockup" style="height:${height}px;width:auto;flex:none;display:inline-block;vertical-align:middle;object-fit:contain;" alt="kbridge" />`;
 }
 
+export function stat(label, icon, value, sub, cls){
+  return `<div class="card card-pad stat">
+    <div class="label">${ic(icon,'icon-sm')} ${label}</div>
+    <div class="value mono ${cls||''}">${value}</div>
+    ${sub? '<div class="sub">'+sub+'</div>' : ''}
+  </div>`;
+}
+
+export function pageHead(title, sub, action, back){
+  return `${back? '<button class="btn btn-quiet btn-sm" style="margin-bottom:10px;padding-left:0" data-act="view" data-view="'+back[0]+'">'+ic('back','icon-sm')+' '+back[1]+'</button>' : ''}
+  <div class="page-head"><div><h1>${title}</h1><p>${sub}</p></div>${action||''}</div>`;
+}
+
+export function banner(kind, icon, text, action){
+  return `<div class="callout c-${kind}" style="margin-bottom:22px;align-items:center;justify-content:space-between;gap:16px">
+    <div class="row gap8" style="align-items:flex-start">${ic(icon,'icon-sm')}<div>${text}</div></div>
+    ${action||''}</div>`;
+}

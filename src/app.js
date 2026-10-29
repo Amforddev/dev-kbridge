@@ -1,6 +1,6 @@
 import { LOGO, PLATFORM_LOGOS, HEDERA_LOGO, HEDERA_MARK } from './assets.js';
 import { P, ic, spinner, TODAY, uid, hash, nf, usdc, tok, nav, pct, short, esc, dstr, dshort, ago, inDays, kLogo } from './helpers.js';
-import { INITIAL_MINT_REQUESTS, mintStatusBadge, pipelineStepper, viewAdminDashboard, viewCapitalPartnerRequests, viewOriginatorNoteRequests } from './capitalFlow.js';
+import { INITIAL_MINT_REQUESTS, mintStatusBadge, pipelineStepper, viewAdminDashboard, viewCapitalPartnerRequests, viewOriginatorNoteRequests, viewOriginatorKundaBoxFees } from './capitalFlow.js';
 import { openRequestNotesModal, openUploadNotesModal, openInspectAndMintModal, openRequestDetailsModal, renderDocChip, openDocumentPreviewModal } from './capitalModals.js';
 import {
   signupScreen, passwordResetScreen, brandedLoginScreen, enhancedGateScreen,
@@ -513,7 +513,7 @@ export function navItems(){
   }
   return S.org === 'theoriq'
     ? [['dash','Dashboard'],['platforms','Platforms'],['wallets','Wallets']]
-    : [['dash','Dashboard'],['requests','Note Requests'],['redemptions','Redemptions'],['wallets','Wallets']];
+    : [['dash','Dashboard'],['requests','Note Requests'],['redemptions','Redemptions'],['fees','Kunda Box Fees'],['wallets','Wallets']];
 }
 
 export function header(){
@@ -1220,7 +1220,7 @@ export const CTX = {
   wal, fundWallets, tokenWallet, orgCash, heldOf, lockedOf,
   positionValue, investedPlatforms, costOf, totalCost,
   myRequests, pfRequests, openModal, closeModal, modalShell,
-  execSteps, successBlock, toast,
+  execSteps, successBlock, toast, selectBox, pageHead, stat,
   get render() { return render; }
 };
 
@@ -2358,6 +2358,7 @@ export function render(){
       dash: viewDashSupply,
       requests: () => pageHead('Note & Contract Requests', 'Upload signed promissory notes and legal contracts requested by KBridge', '') + viewOriginatorNoteRequests(S, CTX),
       redemptions: viewRedemptionsSupply,
+      fees: () => viewOriginatorKundaBoxFees(S, CTX),
       wallets: viewWallets
     };
     fn = supplyViews[S.view] || supplyViews.dash;
@@ -2702,6 +2703,22 @@ document.addEventListener('click', e => {
   }
   else if (a === 'originator-upload-notes'){
     openUploadNotesModal(t.dataset.id, S, CTX);
+  }
+  else if (a === 'originator-settle-fee'){
+    const id = t.dataset.id;
+    const req = S.mintRequests.find(x => x.id === id);
+    if (!req) return;
+    const allocDate = new Date(req.mintedAt || req.created || TODAY);
+    const daysSince = Math.max(1, Math.floor((TODAY.getTime() - allocDate.getTime()) / (1000 * 60 * 60 * 24)));
+    const fee = req.amt * (0.0225 / 365) * daysSince;
+    toast.success('Fee settled for ' + id, nf(fee, 2) + ' USDC paid to Kunda Box (KBridge)', 'check');
+    S.feed.unshift({ ic:'bank', tone:'green', text:`Originating partner settled Kunda Box fee of ${nf(fee, 2)} USDC for allocation ${id}.`, at:new Date() });
+    render();
+  }
+  else if (a === 'originator-settle-all-fees'){
+    toast.success('All accrued fees settled', 'All outstanding Kunda Box administration fees paid successfully.', 'check');
+    S.feed.unshift({ ic:'bank', tone:'green', text:`Originating partner settled all outstanding Kunda Box administration fees.`, at:new Date() });
+    render();
   }
   else if (a === 'admin-inspect-mint'){
     openInspectAndMintModal(t.dataset.id, S, CTX);
