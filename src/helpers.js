@@ -82,13 +82,40 @@ export function inDays(d){
 }
 export function kLogo(sz){
   const s = sz || 32;
-  return `<img src="/assets/icon-amber-round.svg" class="klogo" style="width:${s}px;height:${s}px;flex:none;display:inline-block;vertical-align:middle;object-fit:contain;" alt="KBridge" />`;
+  return `<svg class="klogo" viewBox="0 0 100 100" width="${s}" height="${s}" style="width:${s}px;height:${s}px;flex:none;display:inline-block;vertical-align:middle;user-select:none" aria-label="KBridge">
+    <circle cx="50" cy="50" r="50" fill="#ebb03f"/>
+    <g fill="#0c192c">
+      <path d="M 21.5 54 A 28.5 28.5 0 0 1 78.5 54 L 71 54 A 21 21 0 0 0 29 54 Z"/>
+      <rect x="36" y="35" width="8" height="37"/>
+      <rect x="56" y="35" width="8" height="37"/>
+      <rect x="18" y="53" width="64" height="6" rx="3"/>
+    </g>
+  </svg>`;
 }
 
 export function kLockup(h, theme = 'light'){
   const height = h || 32;
-  const asset = theme === 'dark' ? '/assets/lockup-on-dark.svg' : (theme === 'amber' ? '/assets/lockup-on-amber.svg' : '/assets/lockup-on-light.svg');
-  return `<img src="${asset}" class="klockup" style="height:${height}px;width:auto;flex:none;display:inline-block;vertical-align:middle;object-fit:contain;" alt="kbridge" />`;
+  const isDark = theme === 'dark';
+  const isAmber = theme === 'amber';
+  const circleFill = isAmber ? '#0c192c' : '#ebb03f';
+  const bridgeFill = isAmber ? '#ebb03f' : '#0c192c';
+  const textKFill = isAmber ? '#0c192c' : '#ebb03f';
+  const textBridgeFill = isDark ? '#ffffff' : '#0c192c';
+
+  return `<svg class="klockup" viewBox="0 0 160 40" height="${height}" style="height:${height}px;width:auto;flex:none;display:inline-block;vertical-align:middle" aria-label="kbridge">
+    <g transform="translate(2, 2)">
+      <circle cx="18" cy="18" r="18" fill="${circleFill}"/>
+      <g fill="${bridgeFill}" transform="translate(3.6, 3.6) scale(0.288)">
+        <path d="M 21.5 54 A 28.5 28.5 0 0 1 78.5 54 L 71 54 A 21 21 0 0 0 29 54 Z"/>
+        <rect x="36" y="35" width="8" height="37"/>
+        <rect x="56" y="35" width="8" height="37"/>
+        <rect x="18" y="53" width="64" height="6" rx="3"/>
+      </g>
+    </g>
+    <text x="46" y="27" font-family="Inter, -apple-system, system-ui, sans-serif" font-size="24" font-weight="600" letter-spacing="-0.025em">
+      <tspan fill="${textKFill}">k</tspan><tspan fill="${textBridgeFill}">bridge</tspan>
+    </text>
+  </svg>`;
 }
 
 export function stat(label, icon, value, sub, cls){

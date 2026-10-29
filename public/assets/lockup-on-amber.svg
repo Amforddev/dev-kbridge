@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" width="160" height="40" fill="none">
+  <rect width="160" height="40" rx="8" fill="#ebb03f"/>
+  <g transform="translate(4, 2)">
+    <circle cx="18" cy="18" r="18" fill="#0c192c"/>
+    <g fill="#ebb03f" transform="translate(3.6, 3.6) scale(0.288)">
+      <path d="M 21.5 54 A 28.5 28.5 0 0 1 78.5 54 L 71 54 A 21 21 0 0 0 29 54 Z"/>
+      <rect x="36" y="35" width="8" height="37"/>
+      <rect x="56" y="35" width="8" height="37"/>
+      <rect x="18" y="53" width="64" height="6" rx="3"/>
+    </g>
+  </g>
+  <text x="48" y="27" font-family="Inter, -apple-system, system-ui, sans-serif" font-size="24" font-weight="600" letter-spacing="-0.025em" fill="#0c192c">kbridge</text>
+</svg>

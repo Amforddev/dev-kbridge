@@ -310,7 +310,12 @@ export function viewAdminDashboard(S, ctx) {
     <div style="background:#0F172A;color:#fff;padding:16px 20px;border-radius:var(--r-lg);margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
       <div class="row gap12">
         <div style="width:36px;height:36px;border-radius:8px;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center">
-          <img src="/assets/bridge-amber.svg" style="width:22px;height:22px;object-fit:contain;" alt="KBridge" />
+          <svg viewBox="0 0 100 100" style="width:22px;height:22px;display:inline-block;flex:none" fill="#ebb03f" aria-label="KBridge">
+            <path d="M 21.5 54 A 28.5 28.5 0 0 1 78.5 54 L 71 54 A 21 21 0 0 0 29 54 Z"/>
+            <rect x="36" y="35" width="8" height="37"/>
+            <rect x="56" y="35" width="8" height="37"/>
+            <rect x="18" y="53" width="64" height="6" rx="3"/>
+          </svg>
         </div>
         <div>
           <div style="font-weight:600;font-size:15px;letter-spacing:-.01em">KBridge Admin Console</div>
