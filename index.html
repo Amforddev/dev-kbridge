@@ -245,21 +245,24 @@ tbody tr.hover-row:hover{background:#FAFAF8}
 
 /* ---------- header ---------- */
 header.app{position:sticky;top:0;z-index:40;background:#fff;border-bottom:1px solid var(--line);transition:box-shadow .2s ease}
-.hbar{display:flex;align-items:center;justify-content:space-between;height:64px;gap:12px}
-.nav{display:none;gap:2px;margin-left:22px}
-@media(min-width:900px){.nav{display:flex}}
-.nav button{padding:8px 12px;font-size:13.5px;font-weight:500;color:var(--muted);border-radius:var(--r);
+header.app .wrap{max-width:100% !important;padding:0 20px}
+@media(min-width:1200px){header.app .wrap{padding:0 28px}}
+.hbar{display:flex;align-items:center;justify-content:space-between;height:64px;gap:16px;width:100%}
+.hbar-left{display:flex;align-items:center;min-width:0;flex:1 1 auto;gap:12px}
+.hbar-right{display:flex;align-items:center;flex-shrink:0;gap:8px}
+.nav{display:none;gap:3px;margin-left:12px}
+.nav button{padding:7px 11px;font-size:13px;font-weight:500;color:var(--muted);border-radius:var(--r);
   transition:all .18s var(--ease-spring);white-space:nowrap;position:relative}
 .nav button:hover{color:var(--ink);background:rgba(0,0,0,.03)}
 .nav button.on{background:var(--neutral-bg);color:var(--ink)}
 .nav button:active{transform:scale(0.96)}
 .wallet-chip{display:flex;align-items:center;gap:10px;background:#FAFAF8;border:1px solid var(--line);border-radius:var(--r);
-  padding:5px 10px;box-shadow:var(--shadow-xs);transition:all .18s var(--ease-spring);cursor:pointer}
+  padding:5px 10px;box-shadow:var(--shadow-xs);transition:all .18s var(--ease-spring);cursor:pointer;flex-shrink:0}
 .wallet-chip:hover{background:var(--neutral-bg);border-color:#D6D6D1;transform:translateY(-1px);box-shadow:var(--shadow-sm)}
 .wallet-chip:active{transform:translateY(0) scale(0.98)}
 .avatar{width:24px;height:24px;border-radius:999px;display:flex;align-items:center;justify-content:center;color:#fff;flex:none}
 .divider-v{width:1px;height:22px;background:var(--line)}
-.bell{position:relative;padding:8px;color:var(--faint);border-radius:var(--r);transition:color .16s,background .16s,transform .16s}
+.bell{position:relative;padding:8px;color:var(--faint);border-radius:var(--r);transition:color .16s,background .16s,transform .16s;flex-shrink:0}
 .bell:hover{color:var(--ink);background:var(--line-soft)}
 .bell:hover .icon{animation:bellJingle .6s var(--ease-spring) both}
 @keyframes bellJingle{0%,100%{transform:rotate(0)}20%{transform:rotate(14deg)}40%{transform:rotate(-12deg)}60%{transform:rotate(8deg)}80%{transform:rotate(-4deg)}}
@@ -268,16 +271,17 @@ header.app{position:sticky;top:0;z-index:40;background:#fff;border-bottom:1px so
 @keyframes pipPulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(180,35,24,.6)}50%{transform:scale(1.15);box-shadow:0 0 0 4px rgba(180,35,24,0)}}
 
 /* ---------- Responsive Header & Navigation ---------- */
-.role-switcher-bar{margin-left:14px;background:rgba(15,23,42,0.05);padding:2px;border-radius:99px;border:1px solid rgba(15,23,42,0.06);display:inline-flex;align-items:center;flex-shrink:0}
+.role-switcher-bar{background:rgba(15,23,42,0.05);padding:2px;border-radius:99px;border:1px solid rgba(15,23,42,0.06);display:inline-flex;align-items:center;flex-shrink:0}
 .role-switcher-bar .role-btn{font-size:11px;font-weight:500;padding:2px 8px;border-radius:99px;height:22px;border:none;box-shadow:none;transition:all .15s ease}
 .mobile-subbar{display:none}
 
-@media(min-width:900px){
+@media(min-width:1040px){
   .hide-nav{display:inline-flex !important}
   .mobile-subbar{display:none !important}
+  .nav{display:flex}
 }
 
-@media(max-width:899px){
+@media(max-width:1039px){
   .nav{display:none !important}
   .hide-nav{display:none !important}
   .mobile-subbar{display:flex;align-items:center;gap:10px;padding:6px 0 10px;border-top:1px solid var(--line-soft);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
@@ -599,11 +603,12 @@ button.wrow:active{transform:scale(0.995);background:var(--neutral-bg)}
 .auth-step-line.done{background:var(--ok-line)}
 
 /* user badge chip in header */
-.user-profile-btn{display:flex;align-items:center;gap:8px;padding:4px 8px 4px 5px;border-radius:999px;
-  background:#fff;border:1px solid var(--line);font-size:12.5px;font-weight:500;color:var(--ink);cursor:pointer;
-  transition:all .18s var(--ease-spring);box-shadow:var(--shadow-xs)}
+.user-profile-btn{display:inline-flex;align-items:center;gap:6px;padding:3px 8px 3px 4px;border-radius:999px;
+  background:#fff;border:1px solid var(--line);font-size:12px;font-weight:500;color:var(--ink);cursor:pointer;
+  transition:all .18s var(--ease-spring);box-shadow:var(--shadow-xs);flex-shrink:0}
 .user-profile-btn:hover{background:var(--neutral-bg);border-color:var(--faint);transform:translateY(-1px)}
-.user-avatar-circle{width:24px;height:24px;border-radius:999px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600}
+.user-avatar-circle{width:24px;height:24px;border-radius:999px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0}
+.user-title-badge{font-size:10px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;padding:2px 6px;border-radius:4px;flex-shrink:0}
 
 /* ============================================================
    Built-in Guide & Documentation Design System Styles

@@ -553,6 +553,7 @@ export function header(){
   const userName = currentAdmin ? `${currentAdmin.firstName} ${currentAdmin.lastName}` : (user.firstName ? `${user.firstName} ${user.lastName}` : (ORGS[S.org]?.name || 'Signatory'));
   const userInitials = currentAdmin ? `${currentAdmin.firstName[0]}${currentAdmin.lastName[0]}` : ((user.firstName?.[0] || 'U') + (user.lastName?.[0] || ''));
   const userSub = currentAdmin ? (currentAdmin.adminRole === 'master' ? 'Master Admin' : (currentAdmin.adminRole === 'admin' ? 'Admin' : 'Editor')) : (ORGS[S.org]?.tag || 'Signatory');
+  const roleBadgeText = currentAdmin ? currentAdmin.adminRole.toUpperCase() : (S.org === 'theoriq' ? 'CAPITAL' : (S.org === 'pursuit' ? 'ORIGINATOR' : 'ADMIN'));
 
   return `<header class="app"><div class="wrap">
     <div class="hbar">
@@ -560,21 +561,20 @@ export function header(){
         <div class="brandline" style="cursor:pointer;flex-shrink:0" data-act="view" data-view="dash">
           ${kLogo(28)}<span class="name"><span style="color:#ebb03f">k</span>bridge</span>
         </div>
-        <nav class="nav" style="margin-left:20px">${tabs()}</nav>
-        <span class="divider-v hide-nav" style="height:16px;margin:0 12px;border-left:1px solid var(--line)"></span>
-        <div class="hide-nav">${roleSwitcher}</div>
+        <nav class="nav" style="margin-left:18px">${tabs()}</nav>
       </div>
       <div class="row gap8 hbar-right" style="align-items:center;flex-shrink:0">
+        <div class="hide-nav">${roleSwitcher}</div>
+        <span class="divider-v hide-nav" style="height:16px;margin:0 4px;border-left:1px solid var(--line)"></span>
         <button class="bell" data-act="notif" title="Notifications">${ic('bell')}<span class="pip"></span></button>
         <button class="wallet-chip" data-act="acct" title="Wallet USDC Balance">
           <span class="mono chip-bal" style="font-size:12.5px;font-weight:600">${nf(orgCash(S.org),0)}<span class="faint" style="font-size:10px;margin-left:3px">USDC</span></span>
           <span class="divider-v chip-div"></span>
           <span class="mono chip-addr" style="font-size:11.5px;color:var(--ink-2)">${short(fundWallets(S.org)[0] ? fundWallets(S.org)[0].address : '0x0000000000')}</span>
         </button>
-        <button class="user-profile-btn hide-sm" data-act="view-user-profile" title="Signatory Profile (${esc(userName)} · ${esc(userSub)})">
+        <button class="user-profile-btn hide-sm" data-act="view-user-profile" title="Signatory Profile: ${esc(userName)} · ${esc(userSub)}">
           <span class="user-avatar-circle">${userInitials}</span>
-          <span style="max-width:90px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(userName)}</span>
-          ${currentAdmin ? `<span class="micro" style="margin-left:2px;padding:1px 4px;border-radius:3px;background:${currentAdmin.adminRole==='master'?'#FEF3C7':(currentAdmin.adminRole==='admin'?'var(--ink)':'#EFF6FF')};color:${currentAdmin.adminRole==='master'?'#B45309':(currentAdmin.adminRole==='admin'?'#fff':'#1D4ED8')}">${currentAdmin.adminRole.toUpperCase()}</span>` : ''}
+          <span class="user-title-badge" style="background:${currentAdmin ? (currentAdmin.adminRole==='master'?'#FEF3C7':(currentAdmin.adminRole==='admin'?'var(--ink)':'#EFF6FF')) : '#F3F3F0'};color:${currentAdmin ? (currentAdmin.adminRole==='master'?'#B45309':(currentAdmin.adminRole==='admin'?'#fff':'#1D4ED8')) : 'var(--ink)'}">${esc(roleBadgeText)}</span>
         </button>
         <button class="btn btn-quiet btn-sm" data-act="logout" title="Sign out" style="padding:6px">${ic('out','icon-sm')}</button>
       </div>
