@@ -2,6 +2,7 @@ import { ic, spinner, hash, uid, dstr, dshort, ago, inDays, nf, nav, pct, short,
 import { HEDERA_LOGO, HEDERA_MARK } from './assets.js';
 import { mintStatusBadge, pipelineStepper } from './capitalFlow.js';
 import { registerAllocatedCapitalFee } from './originatorFees.js';
+import { canPerform } from './adminManagement.js';
 
 function getDocMetadata(doc) {
   if (doc.metadata) return doc.metadata;
@@ -147,12 +148,29 @@ export function openRequestNotesModal(reqId, S, ctx) {
 
     <label class="field">
       <span>Backing Invoice / Receivables Facility</span>
-      <select class="input" id="reqFacility">
-        <option value="INV-2026-8921">INV-2026-8921 — Acme Nuts &amp; Bolts Manufacturing ($100,000)</option>
-        <option value="INV-2026-9004">INV-2026-9004 — Vertex Robotics Inc. ($180,000)</option>
-        <option value="INV-2026-8922">INV-2026-8922 — Global Timber Exports Ltd. ($250,000)</option>
-        <option value="INV-2026-9011">INV-2026-9011 — Nexus Healthcare Inc. ($320,000)</option>
-      </select>
+      <input type="hidden" id="reqFacility" value="INV-2026-8921" />
+      ${ctx.selectBox('reqFacilitySel', [
+        { v: 'INV-2026-8921', label: 'INV-2026-8921 — Acme Nuts & Bolts ($100,000)', sub: 'Manufacturing' },
+        { v: 'INV-2026-9004', label: 'INV-2026-9004 — Vertex Robotics Inc. ($180,000)', sub: 'Robotics' },
+        { v: 'INV-2026-8922', label: 'INV-2026-8922 — Global Timber Exports Ltd. ($250,000)', sub: 'Commodities' },
+        { v: 'INV-2026-9011', label: 'INV-2026-9011 — Nexus Healthcare Inc. ($320,000)', sub: 'Healthcare' }
+      ], 'INV-2026-8921', v => {
+        const inp = document.getElementById('reqFacility');
+        if (inp) inp.value = v;
+        const btn = document.querySelector('[data-sel="reqFacilitySel"] .sel-btn');
+        const opts = [
+          { v: 'INV-2026-8921', label: 'INV-2026-8921 — Acme Nuts & Bolts ($100,000)', sub: 'Manufacturing' },
+          { v: 'INV-2026-9004', label: 'INV-2026-9004 — Vertex Robotics Inc. ($180,000)', sub: 'Robotics' },
+          { v: 'INV-2026-8922', label: 'INV-2026-8922 — Global Timber Exports Ltd. ($250,000)', sub: 'Commodities' },
+          { v: 'INV-2026-9011', label: 'INV-2026-9011 — Nexus Healthcare Inc. ($320,000)', sub: 'Healthcare' }
+        ];
+        const opt = opts.find(o => o.v === v);
+        if (btn && opt) {
+          btn.querySelector('.sel-lab').textContent = opt.label;
+          const sub = btn.querySelector('.sel-sub');
+          if (sub) sub.textContent = opt.sub || '';
+        }
+      })}
     </label>
 
     <label class="field">
@@ -361,10 +379,21 @@ export function openInspectAndMintModal(reqId, S, ctx) {
   const origWallet = ctx.wal(ctx.fundWallets('pursuit')[0]?.id) || { address: r.destWallet, usdc: 0, label: 'Originator Partner Funding Wallet' };
   const tokenCustody = ctx.tokenWallet() || { address: r.tokenCustody, bal: { pursuit: 0 } };
 
+  const canMint = canPerform('approve_mint', S);
+
   const body = `
     <div style="margin-bottom:16px">
       ${pipelineStepper(r.status)}
     </div>
+
+    ${!canMint ? `
+      <div class="callout c-amber" style="margin-bottom:16px;border-color:#F59E0B">
+        ${ic('alert', 'icon-sm')}
+        <div style="font-size:12.5px;line-height:1.5">
+          <b>Permission Restricted (View Only):</b> Your active editor account does not possess the <code>Approve Mint Requests</code> permission. You may review the compliance audit and settlement calculations, but only authorized administrators or designated editors can execute the transaction.
+        </div>
+      </div>
+    ` : ''}
 
     <div class="card card-pad" style="background:#F8FAFC;border:1px solid #E2E8F0;margin-bottom:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;flex-wrap:wrap">
@@ -422,8 +451,8 @@ export function openInspectAndMintModal(reqId, S, ctx) {
 
   const foot = `
     <button class="btn btn-ghost" data-act="close">Cancel</button>
-    <button class="btn btn-primary" id="btnExecuteHederaMint">
-      ${ic('coins', 'icon-sm')} Mint Tokens &amp; Transfer Funds on Hedera
+    <button class="btn btn-primary" id="btnExecuteHederaMint" ${canMint ? '' : 'disabled style="opacity:0.5;cursor:not-allowed"'}>
+      ${ic('coins', 'icon-sm')} ${canMint ? 'Mint Tokens &amp; Transfer Funds on Hedera' : 'Minting Restricted (Editor Permission Required)'}
     </button>
   `;
 
@@ -432,6 +461,10 @@ export function openInspectAndMintModal(reqId, S, ctx) {
   const btn = document.getElementById('btnExecuteHederaMint');
   if (btn) {
     btn.addEventListener('click', () => {
+      if (!canMint) {
+        if (ctx.toast) ctx.toast.error('Permission Denied', 'Your editor account does not have permission to approve mint requests.', 'alert');
+        return;
+      }
       const tx = hash();
       const steps = [
         { label: 'Auditing document signature & legal hash', meta: 'SHA-256 match confirmed', ms: 900 },

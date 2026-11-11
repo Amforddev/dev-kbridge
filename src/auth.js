@@ -48,11 +48,29 @@ export const INITIAL_ACCOUNTS = [
     lastName: 'Jenkins',
     dob: '1988-07-22',
     role: 'kbridge',
+    staffRole: 'editor',
+    permissions: ['approve_mint', 'approve_partners', 'manage_guides'],
     entity: 'KBridge Protocol Governance',
     title: 'Protocol Administrator',
     status: 'approved',
     emailVerified: true,
     createdAt: new Date('2025-08-01').toISOString()
+  },
+  {
+    id: 'acc-admin-master',
+    email: 'master@kbridge.io',
+    password: 'kbridge-access',
+    firstName: 'Benjamin',
+    lastName: 'Grant',
+    dob: '1980-03-12',
+    role: 'kbridge',
+    staffRole: 'master',
+    permissions: ['approve_mint', 'approve_partners', 'manage_guides', 'manage_staff'],
+    entity: 'KBridge Protocol Governance',
+    title: 'Chief Protocol Officer',
+    status: 'approved',
+    emailVerified: true,
+    createdAt: new Date('2025-07-15').toISOString()
   }
 ];
 
@@ -172,6 +190,42 @@ export function getPendingAccounts() {
   const accounts = getAccounts();
   return accounts.filter(a => a.status === 'pending_approval' || a.status === 'pending_email');
 }
+
+export function updateStaffMember(email, data) {
+  const accounts = getAccounts();
+  const index = accounts.findIndex(a => a.email.toLowerCase() === email.toLowerCase());
+  if (index !== -1) {
+    accounts[index] = { ...accounts[index], ...data };
+    saveAccounts(accounts);
+    return accounts[index];
+  }
+  return null;
+}
+
+export function addStaffMember(data) {
+  const accounts = getAccounts();
+  const exists = accounts.find(a => a.email.toLowerCase() === data.email.toLowerCase());
+  if (exists) throw new Error('Account already exists');
+  const newAcc = {
+    id: 'staff-' + uid(),
+    password: 'kbridge-access',
+    status: 'approved',
+    emailVerified: true,
+    role: 'kbridge',
+    createdAt: new Date().toISOString(),
+    ...data
+  };
+  accounts.push(newAcc);
+  saveAccounts(accounts);
+  return newAcc;
+}
+
+export function deleteStaffMember(email) {
+  const accounts = getAccounts().filter(a => a.email.toLowerCase() !== email.toLowerCase());
+  saveAccounts(accounts);
+}
+
+function uid() { return Math.random().toString(36).slice(2, 10).toUpperCase(); }
 
 /* ---------- helpers & validation ---------- */
 export function calculateAge(dobStr) {
@@ -768,14 +822,16 @@ export function brandedLoginScreen(S, k) {
             </button>
           </div>
 
+          ${isAdmin ? '' : `
           <div class="sep" style="margin:20px 0 16px"></div>
-          <!-- Sign up link for all roles -->
+          <!-- Sign up link for partner roles -->
           <div style="text-align:center">
             <span class="muted" style="font-size:13px">Need a partner account? </span>
             <button type="button" class="btn btn-quiet btn-sm" data-act="goto-signup" data-role="${k}" style="font-weight:600;color:var(--ink);text-decoration:underline;text-underline-offset:3px">
               Sign up as ${o.tag}
             </button>
           </div>
+          `}
         </div>
       </div>
     </div>
@@ -805,9 +861,11 @@ export function enhancedGateScreen() {
           ${ic('lock', 'icon-xs')} Sign in as ${o.tag}
         </button>
 
+        ${isAdmin ? '' : `
         <button class="btn btn-ghost btn-sm btn-block" data-act="goto-signup" data-role="${k}">
           ${ic('plus', 'icon-xs')} Sign up for ${o.tag}
         </button>
+        `}
       </div>
     </div>`;
   };
@@ -826,6 +884,12 @@ export function enhancedGateScreen() {
     </p>
 
     <div class="gate-grid">${card('theoriq')}${card('pursuit')}${card('kbridge')}</div>
+
+    <div style="margin-top:22px;text-align:center">
+      <button type="button" class="btn btn-quiet btn-sm" data-act="view-guide-gate" style="display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:500;color:var(--ink);background:#ffffff;border:1px solid var(--line);border-radius:var(--r);padding:8px 16px;box-shadow:var(--sh-xs)">
+        ${ic('help', 'icon-xs')} New to KBridge? <b>View Walkthrough &amp; Guide</b>
+      </button>
+    </div>
   </div>`;
 }
 

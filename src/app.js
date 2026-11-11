@@ -1,7 +1,8 @@
 import { LOGO, PLATFORM_LOGOS, HEDERA_LOGO, HEDERA_MARK } from './assets.js';
-import { P, ic, spinner, TODAY, uid, hash, nf, usdc, tok, nav, pct, short, esc, dstr, dshort, ago, inDays, kLogo } from './helpers.js';
-import { INITIAL_MINT_REQUESTS, mintStatusBadge, pipelineStepper, viewAdminDashboard, viewCapitalPartnerRequests, viewOriginatorNoteRequests, viewOriginatorKundaBoxFees } from './capitalFlow.js';
+import { P, ic, spinner, TODAY, uid, hash, nf, usdc, tok, nav, pct, short, esc, dstr, dshort, ago, inDays, kLogo, renderPaginationControls } from './helpers.js';
+import { INITIAL_MINT_REQUESTS, mintStatusBadge, pipelineStepper, viewAdminDashboard, viewCapitalPartnerRequests, viewOriginatorNoteRequests, viewOriginatorKundaBoxFees, viewAdminSignatories, viewAdminPipelineAll, viewAdminFeesExposure } from './capitalFlow.js';
 import { openRequestNotesModal, openUploadNotesModal, openInspectAndMintModal, openRequestDetailsModal, renderDocChip, openDocumentPreviewModal } from './capitalModals.js';
+import { viewGuideCatalog, viewGuideAdminCMS, openGuideEditorModal, openGuideDeleteModal, openGuideCategoryModal, addCategory, deleteCategory, getCategories, saveGuide, deleteGuide, getGuideById } from './guides.js';
 import {
   signupScreen, passwordResetScreen, brandedLoginScreen, enhancedGateScreen,
   pendingEmailScreen, pendingApprovalScreen, userAccountModal, getAccounts,
@@ -9,6 +10,11 @@ import {
   approveAccount, rejectAccount, getPendingAccounts, checkPasswordStrength,
   calculateAge, INITIAL_ACCOUNTS
 } from './auth.js';
+import {
+  viewAdminManagement, openAddAdminModal, openEditPermissionsModal, openDeleteAdminModal,
+  getAdminTeam, getAdminMemberById, getCurrentAdminMember, canPerform, addAdminMember,
+  updateAdminPermissions, updateAdminRole, deleteAdminMember
+} from './adminManagement.js';
 
 /* ============================================================
    KBridge — partner portal
@@ -90,6 +96,19 @@ export const S = {
   adminHidden: false,
   toasts: [],
   mintRequests: JSON.parse(JSON.stringify(INITIAL_MINT_REQUESTS)),
+  pagination: {
+    signatories: 1,
+    pipeline: 1,
+    exposure: 1,
+    guides: 1,
+    team: 1,
+    redemptionsPend: 1,
+    redemptionsDone: 1
+  },
+  signatoryFilter: 'all',
+  signatoryQuery: '',
+  pipelineFilter: 'all',
+  pipelineQuery: '',
 
   platforms: [
     { key:'pursuit', name:'Pursuit', legal:'Pursuit Receivables SPV I', symbol:'TOKENS',
@@ -397,7 +416,7 @@ export function chart(points, opts){
   for (let i = 0; i <= 3; i++){
     const v = lo + (hi-lo) * (i/3), y = Y(v);
     grid += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="#EFEFEB" stroke-width="1"/>`;
-    ylab += `<text x="${padL-10}" y="${(y+3.5).toFixed(1)}" text-anchor="end" font-size="10" fill="#9A9A94" font-family="JetBrains Mono, monospace">$${v.toFixed(3)}</text>`;
+    ylab += `<text x="${padL-10}" y="${(y+3.5).toFixed(1)}" text-anchor="end" font-size="10" fill="#9A9A94" font-family="Poppins, sans-serif">$${v.toFixed(3)}</text>`;
   }
   let xlab = '', seen = '', lastX = -99;
   points.forEach((p,i) => {
@@ -509,11 +528,11 @@ export function loginScreen(k){
 /* ---------- 3. shell ---------- */
 export function navItems(){
   if (S.org === 'kbridge') {
-    return [['dash','Admin Pipeline'],['redemptions','Redemptions'],['wallets','Wallets']];
+    return [['dash','Admin Pipeline'],['redemptions','Redemptions'],['wallets','Wallets'],['guides-admin','Guide CMS'],['admin-management','Admin Management']];
   }
   return S.org === 'theoriq'
-    ? [['dash','Dashboard'],['platforms','Platforms'],['wallets','Wallets']]
-    : [['dash','Dashboard'],['requests','Note Requests'],['redemptions','Redemptions'],['fees','Kunda Box Fees'],['wallets','Wallets']];
+    ? [['dash','Dashboard'],['platforms','Platforms'],['wallets','Wallets'],['guide','User Guide']]
+    : [['dash','Dashboard'],['requests','Note Requests'],['redemptions','Redemptions'],['fees','Kunda Box Fees'],['wallets','Wallets'],['guide','User Guide']];
 }
 
 export function header(){
@@ -521,43 +540,49 @@ export function header(){
     `<button class="${(S.view===k || (k==='platforms' && S.view==='platform'))?'on':''}" data-act="view" data-view="${k}">${l}</button>`).join('');
 
   const roleSwitcher = `
-    <div class="row gap4" style="margin-left:16px;background:rgba(15,23,42,0.05);padding:2px;border-radius:99px;border:1px solid rgba(15,23,42,0.06);display:inline-flex;align-items:center">
-      <span class="muted hide-sm" style="font-size:10px;font-weight:600;padding:0 6px 0 8px;text-transform:uppercase;letter-spacing:0.02em;color:var(--muted)">As:</span>
-      <button class="btn btn-quiet btn-xs" data-act="switch-role" data-org="theoriq" style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:99px;height:22px;border:none;box-shadow:none;background:${S.org==='theoriq'?'var(--ink)':'transparent'};color:${S.org==='theoriq'?'#fff':'var(--muted)'}">Capital</button>
-      <button class="btn btn-quiet btn-xs" data-act="switch-role" data-org="pursuit" style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:99px;height:22px;border:none;box-shadow:none;background:${S.org==='pursuit'?'var(--ink)':'transparent'};color:${S.org==='pursuit'?'#fff':'var(--muted)'}">Originator</button>
-      <button class="btn btn-quiet btn-xs" data-act="switch-role" data-org="kbridge" style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:99px;height:22px;border:none;box-shadow:none;background:${S.org==='kbridge'?'var(--ink)':'transparent'};color:${S.org==='kbridge'?'#fff':'var(--muted)'}">Admin</button>
+    <div class="role-switcher-bar">
+      <span class="muted role-label" style="font-size:10px;font-weight:600;padding:0 4px 0 6px;text-transform:uppercase;letter-spacing:0.02em;color:var(--muted)">As:</span>
+      <button class="btn btn-quiet btn-xs role-btn" data-act="switch-role" data-org="theoriq" style="background:${S.org==='theoriq'?'var(--ink)':'transparent'};color:${S.org==='theoriq'?'#fff':'var(--muted)'}">Capital</button>
+      <button class="btn btn-quiet btn-xs role-btn" data-act="switch-role" data-org="pursuit" style="background:${S.org==='pursuit'?'var(--ink)':'transparent'};color:${S.org==='pursuit'?'#fff':'var(--muted)'}">Originator</button>
+      <button class="btn btn-quiet btn-xs role-btn" data-act="switch-role" data-org="kbridge" style="background:${S.org==='kbridge'?'var(--ink)':'transparent'};color:${S.org==='kbridge'?'#fff':'var(--muted)'}">Admin</button>
     </div>
   `;
 
   const user = S.currentUser || (getAccounts().find(a => a.role === S.org) || INITIAL_ACCOUNTS.find(a => a.role === S.org) || INITIAL_ACCOUNTS[0]);
-  const userName = user.firstName ? `${user.firstName} ${user.lastName}` : (ORGS[S.org]?.name || 'Signatory');
-  const userInitials = (user.firstName?.[0] || 'U') + (user.lastName?.[0] || '');
+  const currentAdmin = S.org === 'kbridge' ? getCurrentAdminMember(S) : null;
+  const userName = currentAdmin ? `${currentAdmin.firstName} ${currentAdmin.lastName}` : (user.firstName ? `${user.firstName} ${user.lastName}` : (ORGS[S.org]?.name || 'Signatory'));
+  const userInitials = currentAdmin ? `${currentAdmin.firstName[0]}${currentAdmin.lastName[0]}` : ((user.firstName?.[0] || 'U') + (user.lastName?.[0] || ''));
+  const userSub = currentAdmin ? (currentAdmin.adminRole === 'master' ? 'Master Admin' : (currentAdmin.adminRole === 'admin' ? 'Admin' : 'Editor')) : (ORGS[S.org]?.tag || 'Signatory');
 
   return `<header class="app"><div class="wrap">
     <div class="hbar">
-      <div class="row" style="align-items:center">
-        <div class="brandline" style="cursor:pointer" data-act="view" data-view="dash">
-          ${kLogo(30)}<span class="name"><span style="color:#ebb03f">k</span>bridge</span>
+      <div class="row hbar-left" style="align-items:center;min-width:0">
+        <div class="brandline" style="cursor:pointer;flex-shrink:0" data-act="view" data-view="dash">
+          ${kLogo(28)}<span class="name"><span style="color:#ebb03f">k</span>bridge</span>
         </div>
-        <nav class="nav" style="margin-left:24px">${tabs()}</nav>
-        <span class="divider-v hide-sm" style="height:16px;margin-left:16px;border-left:1px solid var(--line)"></span>
-        ${roleSwitcher}
+        <nav class="nav" style="margin-left:20px">${tabs()}</nav>
+        <span class="divider-v hide-nav" style="height:16px;margin:0 12px;border-left:1px solid var(--line)"></span>
+        <div class="hide-nav">${roleSwitcher}</div>
       </div>
-      <div class="row gap12" style="align-items:center">
-        <button class="bell" data-act="notif">${ic('bell')}<span class="pip"></span></button>
-        <button class="wallet-chip" data-act="acct">
-          <span class="mono chip-bal" style="font-size:13px;font-weight:500">${nf(orgCash(S.org),0)}<span class="faint" style="font-size:11px;margin-left:4px">USDC</span></span>
+      <div class="row gap8 hbar-right" style="align-items:center;flex-shrink:0">
+        <button class="bell" data-act="notif" title="Notifications">${ic('bell')}<span class="pip"></span></button>
+        <button class="wallet-chip" data-act="acct" title="Wallet USDC Balance">
+          <span class="mono chip-bal" style="font-size:12.5px;font-weight:600">${nf(orgCash(S.org),0)}<span class="faint" style="font-size:10px;margin-left:3px">USDC</span></span>
           <span class="divider-v chip-div"></span>
-          <span class="mono chip-addr" style="font-size:12px;color:var(--ink-2)">${short(fundWallets(S.org)[0] ? fundWallets(S.org)[0].address : '0x0000000000')}</span>
+          <span class="mono chip-addr" style="font-size:11.5px;color:var(--ink-2)">${short(fundWallets(S.org)[0] ? fundWallets(S.org)[0].address : '0x0000000000')}</span>
         </button>
-        <button class="user-profile-btn hide-sm" data-act="view-user-profile" title="Signatory Profile (${esc(userName)})">
+        <button class="user-profile-btn hide-sm" data-act="view-user-profile" title="Signatory Profile (${esc(userName)} · ${esc(userSub)})">
           <span class="user-avatar-circle">${userInitials}</span>
-          <span style="max-width:115px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(userName)}</span>
+          <span style="max-width:90px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(userName)}</span>
+          ${currentAdmin ? `<span class="micro" style="margin-left:2px;padding:1px 4px;border-radius:3px;background:${currentAdmin.adminRole==='master'?'#FEF3C7':(currentAdmin.adminRole==='admin'?'var(--ink)':'#EFF6FF')};color:${currentAdmin.adminRole==='master'?'#B45309':(currentAdmin.adminRole==='admin'?'#fff':'#1D4ED8')}">${currentAdmin.adminRole.toUpperCase()}</span>` : ''}
         </button>
-        <button class="btn btn-quiet btn-sm" data-act="logout" title="Sign out">${ic('out','icon-sm')}</button>
+        <button class="btn btn-quiet btn-sm" data-act="logout" title="Sign out" style="padding:6px">${ic('out','icon-sm')}</button>
       </div>
     </div>
-    <div class="mobile-nav">${tabs()}</div>
+    <div class="mobile-subbar">
+      <div class="mobile-role-wrap">${roleSwitcher}</div>
+      <div class="mobile-nav">${tabs()}</div>
+    </div>
   </div></header>`;
 }
 
@@ -1076,6 +1101,13 @@ export function viewRedemptionsSupply(){
     </div>
   `;
 
+  const pagePend = (S.pagination && S.pagination.redemptionsPend) || 1;
+  const pageDone = (S.pagination && S.pagination.redemptionsDone) || 1;
+  const perPage = 5;
+
+  const displayPend = pend.slice((pagePend - 1) * perPage, pagePend * perPage);
+  const displayDone = done.slice((pageDone - 1) * perPage, pageDone * perPage);
+
   return `${pageHead('Redemptions', 'Holders burn tokens back into USDC. Pick a request, choose the wallet to pay from, and settle it.', '')}
   
   ${platformSelector}
@@ -1093,7 +1125,8 @@ export function viewRedemptionsSupply(){
     <div class="table-scroll"><table>
       <thead><tr><th>Request</th><th>Holder</th><th class="t-right">Tokens</th><th class="t-right">Payable</th>
         <th>Submitted</th><th>Status</th><th></th></tr></thead>
-      <tbody>${requestRows(pend, {cols:7, showHolder:true, honour:true, empty:'Queue is clear.'})}</tbody></table></div>
+      <tbody>${requestRows(displayPend, {cols:7, showHolder:true, honour:true, empty:'Queue is clear.'})}</tbody></table></div>
+    ${renderPaginationControls(pagePend, pend.length, perPage, 'paginate-redemptions-pend', 'Requests')}
   </div>
 
   <div class="card">
@@ -1101,7 +1134,8 @@ export function viewRedemptionsSupply(){
     <div class="table-scroll"><table>
       <thead><tr><th>Request</th><th>Holder</th><th class="t-right">Tokens</th><th class="t-right">Paid</th>
         <th>Submitted</th><th>Status</th><th></th></tr></thead>
-      <tbody>${requestRows(done, {cols:7, showHolder:true, honour:true, empty:'Nothing settled yet.'})}</tbody></table></div>
+      <tbody>${requestRows(displayDone, {cols:7, showHolder:true, honour:true, empty:'Nothing settled yet.'})}</tbody></table></div>
+    ${renderPaginationControls(pageDone, done.length, perPage, 'paginate-redemptions-done', 'Settled Redemptions')}
   </div>`;
 }
 
@@ -2303,6 +2337,7 @@ export function doLogin(){
 }
 
 export function render(){
+  window.render = render;
   const root = document.getElementById('root');
   if (!root) return;
 
@@ -2340,6 +2375,12 @@ export function render(){
   if (isAdmin) {
     const adminViews = {
       dash: () => viewAdminDashboard(S, CTX),
+      'admin-signatories': () => viewAdminSignatories(S, CTX),
+      'admin-pipeline-all': () => viewAdminPipelineAll(S, CTX),
+      'admin-fees-exposure': () => viewAdminFeesExposure(S, CTX),
+      'guides-admin': () => viewGuideAdminCMS(S, CTX),
+      'admin-management': () => viewAdminManagement(S, CTX),
+      guide: () => viewGuideCatalog(S, CTX),
       redemptions: viewRedemptionsSupply,
       wallets: viewWallets
     };
@@ -2349,6 +2390,7 @@ export function render(){
       dash: viewDashCapital,
       platforms: viewPlatforms,
       platform: viewPlatform,
+      guide: () => viewGuideCatalog(S, CTX),
       requests: () => pageHead('Capital Requests', 'Track your token mint requests and legal note coordination with KBridge', '<button class="btn btn-primary" data-act="mint">' + ic('plus','icon-sm') + ' Request to Mint</button>') + viewCapitalPartnerRequests(S, CTX),
       wallets: viewWallets
     };
@@ -2359,6 +2401,7 @@ export function render(){
       requests: () => pageHead('Note & Contract Requests', 'Upload signed promissory notes and legal contracts requested by KBridge', '') + viewOriginatorNoteRequests(S, CTX),
       redemptions: viewRedemptionsSupply,
       fees: () => viewOriginatorKundaBoxFees(S, CTX),
+      guide: () => viewGuideCatalog(S, CTX),
       wallets: viewWallets
     };
     fn = supplyViews[S.view] || supplyViews.dash;
@@ -2419,9 +2462,10 @@ document.addEventListener('click', e => {
     toast.info('Signed out', 'Returned to institutional portal gate', 'out');
   }
   else if (a === 'goto-signup'){
+    if (t.dataset.role === 'kbridge') return;
     S.authMode = 'signup';
     S.gateOrg = null;
-    S.signupState.role = t.dataset.role || 'theoriq';
+    S.signupState.role = (t.dataset.role === 'pursuit' ? 'pursuit' : 'theoriq');
     S.signupState.error = null;
     render();
   }
@@ -2529,6 +2573,15 @@ document.addEventListener('click', e => {
   }
   else if (a === 'admin-approve-acc'){
     const email = t.dataset.email;
+    const acc = findAccountByEmail(email);
+    if (acc) {
+      const permKey = acc.role === 'theoriq' ? 'approve_capital' : 'approve_originators';
+      if (!canPerform(permKey, S)) {
+        const roleLabel = acc.role === 'theoriq' ? 'Capital Partners' : 'Originating Partners';
+        toast.error('Permission Denied', `Your active operator profile does not have permission to approve ${roleLabel}.`, 'alert');
+        return;
+      }
+    }
     const updated = approveAccount(email, 'Approved by KBridge Protocol Governance Admin');
     if (updated) {
       render();
@@ -2538,6 +2591,14 @@ document.addEventListener('click', e => {
   else if (a === 'admin-reject-acc'){
     const email = t.dataset.email;
     const acc = findAccountByEmail(email);
+    if (acc) {
+      const permKey = acc.role === 'theoriq' ? 'approve_capital' : 'approve_originators';
+      if (!canPerform(permKey, S)) {
+        const roleLabel = acc.role === 'theoriq' ? 'Capital Partners' : 'Originating Partners';
+        toast.error('Permission Denied', `Your active operator profile does not have permission to reject ${roleLabel}.`, 'alert');
+        return;
+      }
+    }
     openModal(modalShell('Reject Partner Sign-up Application', `Signatory: ${acc ? acc.firstName + ' ' + acc.lastName : email}`, 'alert',
       `<div class="callout c-red">${ic('alert','icon-sm')}<div>This will reject the signatory request and prevent portal sign-in.</div></div>
        <label class="field" style="margin-top:14px">
@@ -2674,7 +2735,7 @@ document.addEventListener('click', e => {
   else if (a === 'view'){ go(t.dataset.view); }
   else if (a === 'platform'){ S.openPlatform = t.dataset.key; go('platform'); }
   else if (a === 'goto-platform'){ closeModal(); S.openPlatform = t.dataset.key; go('platform'); }
-  else if (a === 'close'){ closeModal(); render(); }
+  else if (a === 'close' || a === 'modal-close'){ closeModal(); render(); }
   else if (a === 'notif'){ notifModal(); }
   else if (a === 'acct'){ go('wallets'); }
 
@@ -2721,6 +2782,10 @@ document.addEventListener('click', e => {
     render();
   }
   else if (a === 'admin-inspect-mint'){
+    if (!canPerform('approve_mint', S)) {
+      toast.error('Permission Denied', 'Your active operator profile does not have permission to approve mint requests.', 'alert');
+      return;
+    }
     openInspectAndMintModal(t.dataset.id, S, CTX);
   }
   else if (a === 'req-details'){
@@ -2739,6 +2804,298 @@ document.addEventListener('click', e => {
     }
     if (doc) {
       openDocumentPreviewModal(doc, S, CTX);
+    }
+  }
+
+  /* Guide and Documentation Actions */
+  else if (a === 'guide-cat'){
+    S.guideCategory = t.dataset.cat;
+    render();
+  }
+  else if (a === 'guide-select'){
+    S.selectedGuideId = t.dataset.id;
+    render();
+  }
+  else if (a === 'guide-create'){
+    if (S.org === 'kbridge' && !canPerform('manage_guides', S)) {
+      toast.error('Permission Denied', 'Your active editor profile does not have permission to author guides.', 'alert');
+      return;
+    }
+    openGuideEditorModal(null, S, CTX);
+  }
+  else if (a === 'guide-edit'){
+    if (S.org === 'kbridge' && !canPerform('manage_guides', S)) {
+      toast.error('Permission Denied', 'Your active editor profile does not have permission to edit guides.', 'alert');
+      return;
+    }
+    openGuideEditorModal(t.dataset.id, S, CTX);
+  }
+  else if (a === 'guide-delete-confirm'){
+    if (S.org === 'kbridge' && !canPerform('manage_guides', S)) {
+      toast.error('Permission Denied', 'Your active editor profile does not have permission to delete guides.', 'alert');
+      return;
+    }
+    openGuideDeleteModal(t.dataset.id, S, CTX);
+  }
+  else if (a === 'guide-delete-go'){
+    if (S.org === 'kbridge' && !canPerform('manage_guides', S)) {
+      toast.error('Permission Denied', 'Your active editor profile does not have permission to delete guides.', 'alert');
+      return;
+    }
+    deleteGuide(t.dataset.id);
+    closeModal();
+    toast.warn('Guide deleted', 'Article removed from documentation', 'trash');
+    render();
+  }
+  else if (a === 'guide-save'){
+    if (S.org === 'kbridge' && !canPerform('manage_guides', S)) {
+      toast.error('Permission Denied', 'Your active editor profile does not have permission to publish or update guides.', 'alert');
+      return;
+    }
+    const id = t.dataset.id || null;
+    const titleEl = document.getElementById('edGuideTitle');
+    const title = titleEl ? titleEl.value.trim() : '';
+    if (!title) {
+      toast.error('Title is required', 'Please provide a clear title for this guide', 'alert');
+      return;
+    }
+    const catEl = document.getElementById('edGuideCat');
+    const readTimeEl = document.getElementById('edGuideReadTime');
+    const statusEl = document.getElementById('edGuideStatus');
+    const excerptEl = document.getElementById('edGuideExcerpt');
+    const canvasEl = document.getElementById('edGuideCanvas');
+    const content = canvasEl ? canvasEl.innerHTML : '<p></p>';
+
+    saveGuide({
+      id,
+      title,
+      category: catEl ? catEl.value : 'Capital Partners',
+      readTime: (readTimeEl && readTimeEl.value.trim()) || '5 min read',
+      status: statusEl ? statusEl.value : 'published',
+      excerpt: (excerptEl && excerptEl.value.trim()) || '',
+      content: content
+    });
+
+    closeModal();
+    toast.success(id ? 'Guide updated' : 'Guide published', title, 'check');
+    render();
+  }
+  else if (a === 'guide-preview-admin'){
+    S.selectedGuideId = t.dataset.id;
+    S.view = 'guide';
+    render();
+  }
+  else if (a === 'guide-admin-filter'){
+    S.guideAdminFilter = t.dataset.f;
+    render();
+  }
+  else if (a === 'guide-cat-manage'){
+    openGuideCategoryModal(S, CTX);
+  }
+  else if (a === 'guide-cat-add-submit'){
+    const nameInp = document.getElementById('newCatName');
+    const subInp = document.getElementById('newCatSub');
+    const name = nameInp ? nameInp.value.trim() : '';
+    if (!name) {
+      toast.error('Category name required', 'Please provide a category name', 'alert');
+      return;
+    }
+    const sub = subInp ? subInp.value.trim() : '';
+    addCategory(name, sub);
+    toast.success('Category added', name, 'check');
+    openGuideCategoryModal(S, CTX);
+  }
+  else if (a === 'guide-cat-del'){
+    deleteCategory(t.dataset.name);
+    toast.warn('Category removed', t.dataset.name, 'trash');
+    openGuideCategoryModal(S, CTX);
+  }
+  else if (a === 'editor-toggle-new-cat'){
+    const box = document.getElementById('editorNewCatBox');
+    if (box) {
+      box.classList.toggle('hide');
+      if (!box.classList.contains('hide')) {
+        const inp = document.getElementById('editorNewCatInput');
+        if (inp) { inp.value = ''; inp.focus(); }
+      }
+    }
+  }
+  else if (a === 'editor-cancel-new-cat'){
+    const box = document.getElementById('editorNewCatBox');
+    if (box) box.classList.add('hide');
+  }
+  else if (a === 'editor-save-new-cat'){
+    const inp = document.getElementById('editorNewCatInput');
+    const name = inp ? inp.value.trim() : '';
+    if (!name) {
+      toast.error('Category name required', 'Please type a category name', 'alert');
+      return;
+    }
+    addCategory(name, 'Custom Category');
+    const hid = document.getElementById('edGuideCat');
+    if (hid) hid.value = name;
+    const btn = document.querySelector('[data-sel="edGuideCatSel"] .sel-btn');
+    if (btn) {
+      const lab = btn.querySelector('.sel-lab');
+      if (lab) lab.textContent = name;
+      const sub = btn.querySelector('.sel-sub');
+      if (sub) sub.textContent = 'Custom Category';
+    }
+    const box = document.getElementById('editorNewCatBox');
+    if (box) box.classList.add('hide');
+    toast.success('Category created & selected', name, 'check');
+  }
+
+  /* WYSIWYG Document Editor Handlers (Google Docs style) */
+  else if (a === 'doc-cmd'){
+    const cmd = t.dataset.cmd;
+    const val = t.dataset.val || null;
+    document.execCommand(cmd, false, val);
+    const canvas = document.getElementById('edGuideCanvas');
+    if (canvas) canvas.focus();
+  }
+  else if (a === 'doc-format'){
+    const tag = t.dataset.tag;
+    if (tag) {
+      document.execCommand('formatBlock', false, '<' + tag + '>');
+    }
+    const canvas = document.getElementById('edGuideCanvas');
+    if (canvas) canvas.focus();
+  }
+  else if (a === 'doc-toggle-link'){
+    const bar = document.getElementById('docLinkBar');
+    if (bar) {
+      bar.classList.toggle('hide');
+      if (!bar.classList.contains('hide')) {
+        const sel = window.getSelection();
+        const selectedText = sel ? sel.toString() : '';
+        const textInp = document.getElementById('docLinkText');
+        const urlInp = document.getElementById('docLinkUrl');
+        if (textInp && selectedText) textInp.value = selectedText;
+        if (urlInp) { urlInp.value = ''; urlInp.focus(); }
+      }
+    }
+  }
+  else if (a === 'doc-apply-link'){
+    const textInp = document.getElementById('docLinkText');
+    const urlInp = document.getElementById('docLinkUrl');
+    let url = urlInp ? urlInp.value.trim() : '';
+    if (!url) {
+      toast.error('URL required', 'Please enter a valid link destination', 'alert');
+      return;
+    }
+    if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('/')) {
+      url = 'https://' + url;
+    }
+    const text = textInp && textInp.value.trim() ? textInp.value.trim() : url;
+    const canvas = document.getElementById('edGuideCanvas');
+    if (canvas) {
+      canvas.focus();
+      document.execCommand('insertHTML', false, `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer" style="color:#0284C7;text-decoration:underline;font-weight:500">${esc(text)}</a>&nbsp;`);
+    }
+    const bar = document.getElementById('docLinkBar');
+    if (bar) bar.classList.add('hide');
+  }
+  else if (a === 'doc-cancel-link'){
+    const bar = document.getElementById('docLinkBar');
+    if (bar) bar.classList.add('hide');
+  }
+  else if (a === 'doc-toggle-img'){
+    const bar = document.getElementById('docImgBar');
+    if (bar) {
+      bar.classList.toggle('hide');
+      if (!bar.classList.contains('hide')) {
+        const urlInp = document.getElementById('docImgUrl');
+        if (urlInp) { urlInp.value = ''; urlInp.focus(); }
+      }
+    }
+  }
+  else if (a === 'doc-browse-device-img'){
+    const fileInp = document.getElementById('docImgFileInput');
+    if (fileInp) fileInp.click();
+  }
+  else if (a === 'doc-clear-device-img'){
+    const fileInp = document.getElementById('docImgFileInput');
+    if (fileInp) fileInp.value = '';
+    const urlInp = document.getElementById('docImgUrl');
+    if (urlInp) urlInp.value = '';
+    const prevWrap = document.getElementById('docDevicePreviewWrap');
+    if (prevWrap) prevWrap.classList.add('hide');
+  }
+  else if (a === 'doc-preset-img'){
+    const url = t.dataset.url;
+    const caption = t.dataset.caption;
+    const urlInp = document.getElementById('docImgUrl');
+    const capInp = document.getElementById('docImgCaption');
+    if (urlInp) urlInp.value = url;
+    if (capInp) capInp.value = caption;
+  }
+  else if (a === 'doc-apply-img'){
+    const urlInp = document.getElementById('docImgUrl');
+    const capInp = document.getElementById('docImgCaption');
+    const url = urlInp ? urlInp.value.trim() : '';
+    if (!url) {
+      toast.error('Image required', 'Please choose an image from your device, select a preset, or enter an image URL', 'alert');
+      return;
+    }
+    const caption = capInp && capInp.value.trim() ? capInp.value.trim() : '';
+    const canvas = document.getElementById('edGuideCanvas');
+    if (canvas) {
+      canvas.focus();
+      const figHtml = `
+        <figure class="guide-diagram" contenteditable="false" style="margin:20px 0;text-align:center">
+          <img src="${esc(url)}" alt="${esc(caption || 'Guide illustration')}" style="max-width:100%;max-height:360px;height:auto;border-radius:8px;object-fit:contain;margin:0 auto;display:block" />
+          ${caption ? `<figcaption class="guide-caption" style="font-size:12px;color:var(--muted);margin-top:8px;text-align:center">${esc(caption)}</figcaption>` : ''}
+        </figure>
+        <p><br></p>
+      `;
+      document.execCommand('insertHTML', false, figHtml);
+    }
+    const bar = document.getElementById('docImgBar');
+    if (bar) bar.classList.add('hide');
+    const fileInp = document.getElementById('docImgFileInput');
+    if (fileInp) fileInp.value = '';
+    const prevWrap = document.getElementById('docDevicePreviewWrap');
+    if (prevWrap) prevWrap.classList.add('hide');
+  }
+  else if (a === 'doc-cancel-img'){
+    const bar = document.getElementById('docImgBar');
+    if (bar) bar.classList.add('hide');
+    const fileInp = document.getElementById('docImgFileInput');
+    if (fileInp) fileInp.value = '';
+    const prevWrap = document.getElementById('docDevicePreviewWrap');
+    if (prevWrap) prevWrap.classList.add('hide');
+  }
+  else if (a === 'doc-add-callout'){
+    const canvas = document.getElementById('edGuideCanvas');
+    if (canvas) {
+      canvas.focus();
+      const calloutHtml = `
+        <div class="callout c-neutral" style="margin:16px 0">
+          <div><b>Note:</b> Enter protocol guidance or operational requirement here.</div>
+        </div>
+        <p><br></p>
+      `;
+      document.execCommand('insertHTML', false, calloutHtml);
+    }
+  }
+  else if (a === 'doc-add-step'){
+    const canvas = document.getElementById('edGuideCanvas');
+    if (canvas) {
+      canvas.focus();
+      const stepHtml = `
+        <div class="guide-steps" style="margin:16px 0">
+          <div class="guide-step">
+            <div class="step-num">01</div>
+            <div class="step-content">
+              <h4>Operational Action Step</h4>
+              <p>Describe step instruction details here...</p>
+            </div>
+          </div>
+        </div>
+        <p><br></p>
+      `;
+      document.execCommand('insertHTML', false, stepHtml);
     }
   }
 
@@ -2775,7 +3132,293 @@ document.addEventListener('click', e => {
     S.wallets = S.wallets.filter(x => x.id !== t.dataset.id);
     closeModal(); render(); toast.warn('Wallet removed', w.label, 'trash');
   }
+
+  /* Admin Team & Governance RBAC Actions */
+  else if (a === 'admin-create-open'){
+    if (!canPerform('manage_admins', S)) {
+      toast.error('Permission Denied', 'Only the Master Admin can provision new administrators and editors.', 'alert');
+      return;
+    }
+    openAddAdminModal(S, CTX);
+  }
+  else if (a === 'admin-create-submit'){
+    if (!canPerform('manage_admins', S)) {
+      toast.error('Permission Denied', 'Only the Master Admin can provision new administrators and editors.', 'alert');
+      return;
+    }
+    const firstEl = document.getElementById('addAdminFirst');
+    const lastEl = document.getElementById('addAdminLast');
+    const emailEl = document.getElementById('addAdminEmail');
+    const titleEl = document.getElementById('addAdminTitle');
+    const roleEl = document.getElementById('addAdminRoleVal');
+
+    const firstName = firstEl ? firstEl.value.trim() : '';
+    const lastName = lastEl ? lastEl.value.trim() : '';
+    const email = emailEl ? emailEl.value.trim() : '';
+    const title = titleEl ? titleEl.value.trim() : '';
+    const adminRole = roleEl ? roleEl.value : 'editor';
+
+    if (!firstName || !lastName || !email) {
+      toast.error('Required fields missing', 'Please provide first name, last name, and institutional email.', 'alert');
+      return;
+    }
+
+    const permissions = {
+      canApproveMint: !!document.getElementById('perm_canApproveMint')?.checked,
+      canApproveOriginators: !!document.getElementById('perm_canApproveOriginators')?.checked,
+      canApproveCapital: !!document.getElementById('perm_canApproveCapital')?.checked,
+      canManageGuides: !!document.getElementById('perm_canManageGuides')?.checked,
+      canManageFees: !!document.getElementById('perm_canManageFees')?.checked
+    };
+
+    try {
+      const created = addAdminMember({
+        firstName,
+        lastName,
+        email,
+        title,
+        adminRole,
+        permissions
+      });
+      closeModal();
+      toast.success('Team Member Appointed', `${created.firstName} ${created.lastName} provisioned as ${created.adminRole === 'editor' ? 'Protocol Editor' : 'Administrator'}.`, 'userCheck');
+      render();
+    } catch (err) {
+      toast.error('Appointment Failed', err.message || 'Could not provision member', 'alert');
+    }
+  }
+  else if (a === 'admin-edit-perms'){
+    if (!canPerform('manage_admins', S)) {
+      toast.error('Permission Denied', 'Only the Master Admin can edit team permissions.', 'alert');
+      return;
+    }
+    openEditPermissionsModal(t.dataset.id, S, CTX);
+  }
+  else if (a === 'admin-save-perms'){
+    if (!canPerform('manage_admins', S)) {
+      toast.error('Permission Denied', 'Only the Master Admin can edit team permissions.', 'alert');
+      return;
+    }
+    const memberId = t.dataset.id;
+    const permissions = {
+      canApproveMint: !!document.getElementById('editPerm_canApproveMint')?.checked,
+      canApproveOriginators: !!document.getElementById('editPerm_canApproveOriginators')?.checked,
+      canApproveCapital: !!document.getElementById('editPerm_canApproveCapital')?.checked,
+      canManageGuides: !!document.getElementById('editPerm_canManageGuides')?.checked,
+      canManageFees: !!document.getElementById('editPerm_canManageFees')?.checked
+    };
+    const updated = updateAdminPermissions(memberId, permissions);
+    closeModal();
+    if (updated) {
+      toast.success('Permissions Updated', `Capabilities saved for ${updated.firstName} ${updated.lastName}.`, 'shieldCheck');
+    }
+    render();
+  }
+  else if (a === 'admin-toggle-role'){
+    if (!canPerform('manage_admins', S)) {
+      toast.error('Permission Denied', 'Only the Master Admin can modify hierarchy tiers.', 'alert');
+      return;
+    }
+    const member = getAdminMemberById(t.dataset.id);
+    if (!member) return;
+    const newRole = member.adminRole === 'editor' ? 'admin' : 'editor';
+    try {
+      const updated = updateAdminRole(member.id, newRole);
+      toast.success('Role Updated', `${updated.firstName} ${updated.lastName} updated to ${newRole === 'editor' ? 'Protocol Editor' : 'Administrator'}.`, 'userCheck');
+      render();
+    } catch (err) {
+      toast.error('Role Update Failed', err.message, 'alert');
+    }
+  }
+  else if (a === 'admin-switch-operator'){
+    S.activeAdminId = t.dataset.id;
+    const member = getAdminMemberById(t.dataset.id);
+    toast.info('Simulating Operator', `Active session switched to ${member.firstName} ${member.lastName} (${member.adminRole})`, 'userCheck');
+    render();
+  }
+  else if (a === 'admin-del-confirm'){
+    if (!canPerform('manage_admins', S)) {
+      toast.error('Permission Denied', 'Only the Master Admin can revoke team access.', 'alert');
+      return;
+    }
+    openDeleteAdminModal(t.dataset.id, S, CTX);
+  }
+  else if (a === 'admin-del-go'){
+    if (!canPerform('manage_admins', S)) {
+      toast.error('Permission Denied', 'Only the Master Admin can revoke team access.', 'alert');
+      return;
+    }
+    try {
+      deleteAdminMember(t.dataset.id);
+      closeModal();
+      toast.warn('Access Revoked', 'Governance member was removed from the active directory.', 'trash');
+      render();
+    } catch (err) {
+      toast.error('Revocation Failed', err.message, 'alert');
+    }
+  }
+
+  /* Pagination and Filter Actions */
+  else if (a === 'paginate-signatories'){
+    const p = parseInt(t.dataset.page);
+    if (!isNaN(p)) {
+      if (!S.pagination) S.pagination = {};
+      S.pagination.signatories = p;
+      render();
+    }
+  }
+  else if (a === 'paginate-pipeline'){
+    const p = parseInt(t.dataset.page);
+    if (!isNaN(p)) {
+      if (!S.pagination) S.pagination = {};
+      S.pagination.pipeline = p;
+      render();
+    }
+  }
+  else if (a === 'paginate-exposure'){
+    const p = parseInt(t.dataset.page);
+    if (!isNaN(p)) {
+      if (!S.pagination) S.pagination = {};
+      S.pagination.exposure = p;
+      render();
+    }
+  }
+  else if (a === 'paginate-guides'){
+    const p = parseInt(t.dataset.page);
+    if (!isNaN(p)) {
+      if (!S.pagination) S.pagination = {};
+      S.pagination.guides = p;
+      render();
+    }
+  }
+  else if (a === 'paginate-team'){
+    const p = parseInt(t.dataset.page);
+    if (!isNaN(p)) {
+      if (!S.pagination) S.pagination = {};
+      S.pagination.team = p;
+      render();
+    }
+  }
+  else if (a === 'paginate-redemptions-pend'){
+    const p = parseInt(t.dataset.page);
+    if (!isNaN(p)) {
+      if (!S.pagination) S.pagination = {};
+      S.pagination.redemptionsPend = p;
+      render();
+    }
+  }
+  else if (a === 'paginate-redemptions-done'){
+    const p = parseInt(t.dataset.page);
+    if (!isNaN(p)) {
+      if (!S.pagination) S.pagination = {};
+      S.pagination.redemptionsDone = p;
+      render();
+    }
+  }
+  else if (a === 'filter-signatories'){
+    S.signatoryFilter = t.dataset.filter || 'all';
+    if (!S.pagination) S.pagination = {};
+    S.pagination.signatories = 1;
+    render();
+  }
+  else if (a === 'filter-pipeline'){
+    S.pipelineFilter = t.dataset.filter || 'all';
+    if (!S.pagination) S.pagination = {};
+    S.pagination.pipeline = 1;
+    render();
+  }
 });
+
+document.addEventListener('input', e => {
+  if (e.target && e.target.id === 'signatorySearchInput') {
+    S.signatoryQuery = e.target.value;
+    if (!S.pagination) S.pagination = {};
+    S.pagination.signatories = 1;
+    render();
+    const inp = document.getElementById('signatorySearchInput');
+    if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+  } else if (e.target && e.target.id === 'pipelineSearchInput') {
+    S.pipelineQuery = e.target.value;
+    if (!S.pagination) S.pagination = {};
+    S.pagination.pipeline = 1;
+    render();
+    const inp = document.getElementById('pipelineSearchInput');
+    if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+  } else if (e.target && e.target.id === 'guideAdminSearchInput') {
+    S.guideAdminQuery = e.target.value;
+    if (!S.pagination) S.pagination = {};
+    S.pagination.guides = 1;
+    render();
+    const inp = document.getElementById('guideAdminSearchInput');
+    if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+  }
+});
+
+document.addEventListener('change', e => {
+  if (e.target && e.target.id === 'docImgFileInput') {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Invalid file type', 'Please select an image file (PNG, JPG, SVG, WebP).', 'alert');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const dataUrl = ev.target.result;
+      const urlInp = document.getElementById('docImgUrl');
+      if (urlInp) urlInp.value = dataUrl;
+
+      const capInp = document.getElementById('docImgCaption');
+      if (capInp && !capInp.value.trim()) {
+        const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+        capInp.value = 'Figure: ' + cleanName;
+      }
+
+      const prevWrap = document.getElementById('docDevicePreviewWrap');
+      const thumb = document.getElementById('docDeviceThumb');
+      const nameEl = document.getElementById('docDeviceFileName');
+      const sizeEl = document.getElementById('docDeviceFileSize');
+
+      if (thumb) thumb.src = dataUrl;
+      if (nameEl) nameEl.textContent = file.name;
+      if (sizeEl) {
+        const kb = (file.size / 1024).toFixed(1);
+        sizeEl.textContent = `${kb} KB · Device Image Ready`;
+      }
+      if (prevWrap) prevWrap.classList.remove('hide');
+
+      toast.success('Image loaded from device', file.name, 'image');
+    };
+    reader.onerror = () => {
+      toast.error('Failed to read image', 'Could not read the selected file from device', 'alert');
+    };
+    reader.readAsDataURL(file);
+  }
+});
+document.addEventListener('input', e => {
+  if (e.target && e.target.id === 'guideSearchInput') {
+    S.guideQuery = e.target.value;
+    const val = e.target.value;
+    render();
+    const input = document.getElementById('guideSearchInput');
+    if (input) {
+      input.focus();
+      input.setSelectionRange(val.length, val.length);
+    }
+  } else if (e.target && e.target.id === 'guideAdminSearch') {
+    S.guideAdminQuery = e.target.value;
+    const val = e.target.value;
+    render();
+    const input = document.getElementById('guideAdminSearch');
+    if (input) {
+      input.focus();
+      input.setSelectionRange(val.length, val.length);
+    }
+  }
+});
+
 document.addEventListener('keydown', e => { if (e.key === 'Escape'){ closeSelects(); closeModal(); } });
 
 // Initial render on boot

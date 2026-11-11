@@ -46,7 +46,18 @@ export const P = {
   mail:'M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z M22 6l-10 7L2 6',
   key:'m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4a1 1 0 0 0-1.4 0l-2.1 2.1a1 1 0 0 0 0 1.4ZM2 14v4a2 2 0 0 0 2 2h4l6-6-4-4-8 4Z',
   user:'M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z',
-  calendar:'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z'
+  calendar:'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z',
+  book:'M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5ZM6 6h10M6 10h10',
+  search:'m21 21-4.3-4.3M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z',
+  bookmark:'m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z',
+  code:'m16 18 6-6-6-6M8 6l-6 6 6 6',
+  image:'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10z M9 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4z M21 15l-5-5L5 21',
+  external:'M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6',
+  shieldCheck:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z M9 12l2 2 4-4',
+  userCheck:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M16 11l2 2 4-4',
+  userPlus:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M19 8v6 M22 11h-6',
+  crown:'m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14',
+  arrowRight:'M5 12h14M12 5l7 7-7 7'
 };
 
 export function ic(n, cls){ return '<svg class="icon '+(cls||'')+'" viewBox="0 0 24 24" aria-hidden="true"><path d="'+(P[n]||P.info)+'"/></svg>'; }
@@ -135,4 +146,56 @@ export function banner(kind, icon, text, action){
   return `<div class="callout c-${kind}" style="margin-bottom:22px;align-items:center;justify-content:space-between;gap:16px">
     <div class="row gap8" style="align-items:flex-start">${ic(icon,'icon-sm')}<div>${text}</div></div>
     ${action||''}</div>`;
+}
+
+export function renderPaginationControls(currentPage, totalItems, perPage, actName, label = 'items') {
+  const totalPages = Math.max(1, Math.ceil(totalItems / perPage));
+  const curPage = Math.min(Math.max(1, currentPage || 1), totalPages);
+
+  const start = totalItems === 0 ? 0 : (curPage - 1) * perPage + 1;
+  const end = Math.min(curPage * perPage, totalItems);
+
+  if (totalPages <= 1) {
+    return `
+      <div class="card-foot between" style="padding:12px 20px;border-top:1px solid var(--line);background:#FAFAF8">
+        <span class="faint" style="font-size:12.5px">Showing <b>${totalItems}</b> of <b>${totalItems}</b> ${label}</span>
+        <span class="mono faint" style="font-size:11.5px">Page 1 of 1</span>
+      </div>
+    `;
+  }
+
+  let pageBtns = '';
+  for (let i = 1; i <= totalPages; i++) {
+    if (totalPages > 7) {
+      if (i > 2 && i < totalPages - 1 && Math.abs(i - curPage) > 1) {
+        if (i === 3 || i === totalPages - 2) {
+          pageBtns += `<span class="faint" style="padding:0 4px">…</span>`;
+        }
+        continue;
+      }
+    }
+    const isActive = i === curPage;
+    pageBtns += `
+      <button class="btn ${isActive ? 'btn-primary' : 'btn-ghost'} btn-xs" data-act="${actName}" data-page="${i}" style="min-width:28px;height:28px;font-weight:${isActive ? '600' : '400'}">
+        ${i}
+      </button>
+    `;
+  }
+
+  return `
+    <div class="card-foot between" style="padding:12px 20px;border-top:1px solid var(--line);background:#FAFAF8;flex-wrap:wrap;gap:12px">
+      <div class="faint" style="font-size:12.5px">
+        Showing <b style="color:var(--ink)">${start}–${end}</b> of <b style="color:var(--ink)">${totalItems}</b> ${label}
+      </div>
+      <div class="row gap6">
+        <button class="btn btn-ghost btn-xs" data-act="${actName}" data-page="${curPage - 1}" ${curPage <= 1 ? 'disabled style="opacity:0.4;cursor:not-allowed"' : ''}>
+          ${ic('back', 'icon-xs')} Prev
+        </button>
+        ${pageBtns}
+        <button class="btn btn-ghost btn-xs" data-act="${actName}" data-page="${curPage + 1}" ${curPage >= totalPages ? 'disabled style="opacity:0.4;cursor:not-allowed"' : ''}>
+          Next ${ic('chev', 'icon-xs')}
+        </button>
+      </div>
+    </div>
+  `;
 }
