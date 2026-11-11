@@ -1,6 +1,0 @@
-{
-  "summary": "Implementation plan for adding a built-in Guide & Documentation module in KBridge, featuring a blog-style Admin editor (Markdown + live preview, category management, draft/published workflow) and a public dedicated Guides viewer with category sidebar navigation.",
-  "updatedAt": "2026-11-06T08:04:15.517152136Z",
-  "requestFeedback": true,
-  "userFacing": true
-}

@@ -2336,12 +2336,44 @@ export function doLogin(){
   }, 750);
 }
 
+export function publicGuideScreen(S, CTX) {
+  return `
+    <header class="app">
+      <div class="wrap" style="max-width:100% !important;padding:0 24px">
+        <div class="hbar" style="height:60px">
+          <div class="row gap12" style="align-items:center">
+            <div class="brandline" style="cursor:pointer" data-act="back-gate">
+              ${kLogo(28)}<span class="name"><span style="color:#ebb03f">k</span>bridge</span>
+            </div>
+            <span class="divider-v" style="height:18px"></span>
+            <span class="muted hide-sm" style="font-size:12.5px;font-weight:500">Walkthrough &amp; Protocol Guides</span>
+          </div>
+          <div class="row gap10" style="align-items:center">
+            <button class="btn btn-primary btn-sm" data-act="back-gate" style="display:inline-flex;align-items:center;gap:6px">
+              ${ic('lock', 'icon-xs')} Return to Partner Gate
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+    <main style="padding:24px 0 64px">
+      <div class="wrap fadein">
+        ${viewGuideCatalog(S, CTX)}
+      </div>
+    </main>
+  `;
+}
+
 export function render(){
   window.render = render;
   const root = document.getElementById('root');
   if (!root) return;
 
   if (!S.org){
+    if (S.authMode === 'gate-guide') {
+      root.innerHTML = publicGuideScreen(S, CTX);
+      return;
+    }
     if (S.authMode === 'signup') {
       root.innerHTML = signupScreen(S);
       attachSignupEvents();
@@ -2456,7 +2488,13 @@ document.addEventListener('click', e => {
 
   if (a === 'pick'){ S.authMode = 'login'; S.gateOrg = t.dataset.org; render(); }
   else if (a === 'login'){ doLogin(); }
-  else if (a === 'back-gate'){ S.authMode = 'gate'; S.gateOrg = null; S.signupState.error = null; S.resetState.error = null; render(); }
+  else if (a === 'back-gate'){ S.authMode = 'gate'; S.gateOrg = null; S.signupState.error = null; S.resetState.error = null; render(); window.scrollTo(0,0); }
+  else if (a === 'view-guide-gate'){
+    if (!S.org) S.authMode = 'gate-guide';
+    S.view = 'guide';
+    render();
+    window.scrollTo(0, 0);
+  }
   else if (a === 'logout'){
     S.org = null; S.gateOrg = null; S.authMode = 'gate'; S.currentUser = null; closeModal(); render();
     toast.info('Signed out', 'Returned to institutional portal gate', 'out');
