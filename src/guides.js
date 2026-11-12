@@ -377,11 +377,10 @@ export function viewGuideCatalog(S, ctx) {
     `;
   }
 
-  // Design system dropdown options
+  // Design system dropdown options without subtitles (clean, minimalist)
   const guideOptions = guides.map(g => ({
     v: g.id,
-    label: g.title,
-    sub: `${g.category} · ${g.readTime}`
+    label: g.title
   }));
 
   const topicDropdown = selectBox('guideTopicSelect', guideOptions, activeGuide.id, (chosenId) => {
@@ -390,41 +389,24 @@ export function viewGuideCatalog(S, ctx) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 
-  const currentIndex = guides.findIndex(g => g.id === activeGuide.id);
-  const prevGuide = currentIndex > 0 ? guides[currentIndex - 1] : null;
-  const nextGuide = currentIndex < guides.length - 1 ? guides[currentIndex + 1] : null;
-
   return `
     <div class="guide-calm-wrap fadein">
-      <!-- Calm, Reassuring Header -->
-      <div style="text-align:center;margin-bottom:28px">
-        <div style="display:inline-flex;align-items:center;gap:6px;padding:3px 12px;border-radius:999px;background:#fff;border:1px solid var(--line);font-size:11.5px;font-weight:600;color:var(--muted);box-shadow:var(--shadow-xs);margin-bottom:10px">
-          ${ic('book', 'icon-xs')} Protocol Guide &amp; Walkthrough
-        </div>
-        <h1 style="font-size:24px;font-weight:600;letter-spacing:-.02em;color:var(--ink)">
-          ${esc(activeGuide.title)}
-        </h1>
-        <p class="muted" style="font-size:13.5px;margin-top:6px;max-width:540px;margin-left:auto;margin-right:auto;line-height:1.55">
-          Step-by-step documentation to help you understand how capital allocation, promissory notes, and token settlements work smoothly on KBridge.
-        </p>
-      </div>
-
-      <!-- Focused Reading Card -->
       <div class="guide-calm-card">
-        <!-- Simple Dropdown Menu to switch topics -->
-        <div style="margin-bottom:20px">
+        <!-- Minimalist Topic Dropdown Menu without subtitles -->
+        <div style="margin-bottom:22px">
           <label class="field" style="margin:0">
-            <span style="font-size:11px;font-weight:600;color:var(--faint);letter-spacing:0.06em;text-transform:uppercase">Choose Guide Topic</span>
+            <span style="font-size:11px;font-weight:600;color:var(--muted);letter-spacing:0.04em;text-transform:uppercase">Topic</span>
             ${topicDropdown}
           </label>
         </div>
 
+        <!-- Guide Title -->
+        <h1 style="font-size:24px;font-weight:600;letter-spacing:-.02em;color:var(--ink);margin:0 0 16px">
+          ${esc(activeGuide.title)}
+        </h1>
+
         <!-- Serene, clear Description -->
-        <div class="guide-desc-box">
-          <div class="row between" style="align-items:center;margin-bottom:8px">
-            <span class="micro" style="color:var(--muted)">Overview</span>
-            <span class="mono" style="font-size:11.5px;color:var(--faint)">${esc(activeGuide.category)} · ${esc(activeGuide.readTime)} · Updated ${esc(activeGuide.lastUpdated)}</span>
-          </div>
+        <div class="guide-desc-box" style="margin:0 0 28px">
           <p class="guide-desc-text">
             ${esc(activeGuide.excerpt)}
           </p>
@@ -435,26 +417,8 @@ export function viewGuideCatalog(S, ctx) {
           ${activeGuide.content}
         </div>
 
-        <!-- Previous / Next Tranquil Navigation -->
-        <div class="guide-footer-nav between" style="margin-top:40px;padding-top:24px;border-top:1px solid var(--line);flex-wrap:wrap;gap:12px">
-          <div>
-            ${prevGuide ? `
-              <button class="btn btn-quiet btn-sm" data-act="guide-select" data-id="${prevGuide.id}" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--line);background:#FAFAF8;border-radius:var(--r)">
-                ${ic('back', 'icon-xs')} <span class="muted" style="font-size:12px">Previous:</span> <span style="font-weight:600;font-size:12.5px">${esc(prevGuide.title.length > 28 ? prevGuide.title.slice(0, 28) + '…' : prevGuide.title)}</span>
-              </button>
-            ` : '<span></span>'}
-          </div>
-          <div>
-            ${nextGuide ? `
-              <button class="btn btn-quiet btn-sm" data-act="guide-select" data-id="${nextGuide.id}" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--line);background:#FAFAF8;border-radius:var(--r)">
-                <span class="muted" style="font-size:12px">Next:</span> <span style="font-weight:600;font-size:12.5px">${esc(nextGuide.title.length > 28 ? nextGuide.title.slice(0, 28) + '…' : nextGuide.title)}</span> ${ic('chev', 'icon-xs')}
-              </button>
-            ` : '<span></span>'}
-          </div>
-        </div>
-
         ${S.org === 'kbridge' ? `
-          <div style="text-align:center;margin-top:24px;padding-top:16px;border-top:1px solid var(--line-soft)">
+          <div style="text-align:center;margin-top:36px;padding-top:16px;border-top:1px solid var(--line-soft)">
             <button class="btn btn-quiet btn-xs" data-act="view" data-view="guides-admin" style="font-size:11.5px;color:var(--muted)">
               ${ic('pencil', 'icon-xs')} Open in Guide CMS (Admin)
             </button>
