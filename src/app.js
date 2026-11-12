@@ -1,5 +1,5 @@
 import { LOGO, PLATFORM_LOGOS, HEDERA_LOGO, HEDERA_MARK } from './assets.js';
-import { P, ic, spinner, TODAY, uid, hash, nf, usdc, tok, nav, pct, short, esc, dstr, dshort, ago, inDays, kLogo, renderPaginationControls } from './helpers.js';
+import { P, ic, spinner, TODAY, uid, hash, nf, usdc, tok, nav, pct, short, esc, dstr, dshort, ago, inDays, kLogo, renderPaginationControls, selectBox, SELS } from './helpers.js';
 import { INITIAL_MINT_REQUESTS, mintStatusBadge, pipelineStepper, viewAdminDashboard, viewCapitalPartnerRequests, viewOriginatorNoteRequests, viewOriginatorKundaBoxFees, viewAdminSignatories, viewAdminPipelineAll, viewAdminFeesExposure } from './capitalFlow.js';
 import { openRequestNotesModal, openUploadNotesModal, openInspectAndMintModal, openRequestDetailsModal, renderDocChip, openDocumentPreviewModal } from './capitalModals.js';
 import { viewGuideCatalog, viewGuideAdminCMS, openGuideEditorModal, openGuideDeleteModal, openGuideCategoryModal, addCategory, deleteCategory, getCategories, saveGuide, deleteGuide, getGuideById } from './guides.js';
@@ -491,29 +491,7 @@ export function bindChart(){
   });
 }
 
-export const SELS = {};
-export function selectBox(id, options, value, onPick){
-  SELS[id] = { options, value, onPick };
-  const cur = options.find(o => o.v === value) || options[0] || {label:'—'};
-  return `<div class="sel" data-sel="${id}">
-    <button class="sel-btn" type="button" data-act="sel-open" data-id="${id}">
-      <span class="stack" style="min-width:0">
-        <span class="sel-lab">${cur.label}</span>
-        ${cur.sub ? '<span class="sel-sub mono">'+cur.sub+'</span>' : ''}
-      </span>
-      ${ic('chevd','icon-sm')}
-    </button>
-    <div class="sel-menu hide" data-menu="${id}">
-      ${options.map(o => `<button class="sel-opt ${o.v===value?'sel-on':''}" type="button" data-act="sel-pick" data-id="${id}" data-v="${o.v}">
-        <span class="stack" style="min-width:0">
-          <span class="sel-lab">${o.label}</span>
-          ${o.sub ? '<span class="sel-sub mono">'+o.sub+'</span>' : ''}
-        </span>
-        <span class="sel-tick">${ic('check','icon-sm')}</span>
-      </button>`).join('')}
-    </div>
-  </div>`;
-}
+export { SELS, selectBox };
 
 /* ---------- 1. partner gate ---------- */
 export function gateScreen(){

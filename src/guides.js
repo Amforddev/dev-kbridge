@@ -1,4 +1,4 @@
-import { ic, spinner, dshort, TODAY, esc, short, uid, renderPaginationControls } from './helpers.js';
+import { ic, spinner, dshort, TODAY, esc, short, uid, renderPaginationControls, selectBox } from './helpers.js';
 
 /* ============================================================
    KBridge Built-in Protocol Documentation & Guide System
@@ -362,149 +362,104 @@ export function deleteGuide(id) {
 
 export function viewGuideCatalog(S, ctx) {
   const guides = getGuides().filter(g => g.status === 'published' || S.org === 'kbridge');
-  const activeCategory = S.guideCategory || 'all';
-  const query = (S.guideQuery || '').toLowerCase().trim();
+  const selectedId = S.selectedGuideId || (guides[0] ? guides[0].id : null);
+  const activeGuide = guides.find(g => g.id === selectedId) || guides[0];
 
-  // Filter guides
-  const filtered = guides.filter(g => {
-    const matchCat = activeCategory === 'all' || g.category.toLowerCase() === activeCategory.toLowerCase();
-    const matchQuery = !query || g.title.toLowerCase().includes(query) || (g.excerpt && g.excerpt.toLowerCase().includes(query));
-    return matchCat && matchQuery;
-  });
-
-  // Selected guide for article display
-  const selectedId = S.selectedGuideId || (filtered[0] ? filtered[0].id : (guides[0] ? guides[0].id : null));
-  const activeGuide = guides.find(g => g.id === selectedId) || filtered[0] || guides[0];
-
-  const allCatNames = [...new Set([...getCategories().map(c => c.name), ...guides.map(g => g.category)])];
-  const categories = ['all', ...allCatNames];
-
-  const categoryPills = categories.map(cat => {
-    const label = cat === 'all' ? 'All Guides' : cat;
-    const isSelected = activeCategory.toLowerCase() === cat.toLowerCase();
+  if (!activeGuide) {
     return `
-      <button class="guide-cat-btn ${isSelected ? 'on' : ''}" data-act="guide-cat" data-cat="${esc(cat)}">
-        ${esc(label)}
-      </button>
-    `;
-  }).join('');
-
-  const guideListHtml = filtered.map(g => {
-    const isActive = activeGuide && activeGuide.id === g.id;
-    return `
-      <div class="guide-item-card ${isActive ? 'active' : ''}" data-act="guide-select" data-id="${g.id}">
-        <div class="guide-meta-unboxed">
-          <span>${esc(g.category)}</span>
-          <span aria-hidden="true">·</span>
-          <span>${esc(g.readTime)}</span>
+      <div class="guide-calm-wrap">
+        <div class="card card-pad" style="text-align:center;padding:64px 20px">
+          <div style="color:var(--muted);margin-bottom:12px">${ic('book', 'icon-lg')}</div>
+          <h3 style="font-size:16px;font-weight:600">No guides found</h3>
+          <p class="muted" style="font-size:13px;margin-top:6px">No documentation articles have been published yet.</p>
         </div>
-        <div class="guide-item-title">${esc(g.title)}</div>
-        <div class="guide-item-excerpt">${esc(g.excerpt || '')}</div>
-      </div>
-    `;
-  }).join('');
-
-  const adminShortcut = S.org === 'kbridge' ? `
-    <button class="btn btn-ghost btn-sm" data-act="view" data-view="guides-admin" style="display:inline-flex;align-items:center;gap:6px">
-      ${ic('fileText', 'icon-xs')} Manage Guides (CMS)
-    </button>
-  ` : '';
-
-  // Reader body
-  let readerHtml = '';
-  if (activeGuide) {
-    readerHtml = `
-      <div class="guide-reader-container">
-        <!-- Article Header -->
-        <div class="guide-article-head">
-          <div class="guide-meta-unboxed" style="font-size:12px;margin-bottom:8px">
-            <span style="font-weight:600;color:var(--ink)">${esc(activeGuide.category.toUpperCase())}</span>
-            <span aria-hidden="true">·</span>
-            <span>${esc(activeGuide.readTime)}</span>
-            <span aria-hidden="true">·</span>
-            <span>UPDATED ${esc(activeGuide.lastUpdated)}</span>
-            ${activeGuide.status === 'draft' ? '<span aria-hidden="true">·</span><span style="color:var(--warn);font-weight:600">DRAFT</span>' : ''}
-          </div>
-
-          <h1 class="guide-article-title">${esc(activeGuide.title)}</h1>
-          
-          <div class="guide-article-lead">
-            ${esc(activeGuide.excerpt)}
-          </div>
-
-          <div class="guide-author-bar">
-            <div class="author-avatar">${ic('shield', 'icon-xs')}</div>
-            <div>
-              <div style="font-weight:600;font-size:13px">${esc(activeGuide.author)}</div>
-              <div class="faint" style="font-size:11px">Authorized Protocol Knowledge Base</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="guide-prose">
-          ${activeGuide.content}
-        </div>
-
-        <div class="guide-footer-nav">
-          <div class="row gap8">
-            <span class="faint" style="font-size:12px">Published on KBridge Knowledge Core</span>
-          </div>
-          ${S.org === 'kbridge' ? `
-            <button class="btn btn-ghost btn-sm" data-act="guide-edit" data-id="${activeGuide.id}">
-              ${ic('pencil', 'icon-xs')} Edit This Guide in CMS
-            </button>
-          ` : ''}
-        </div>
-      </div>
-    `;
-  } else {
-    readerHtml = `
-      <div class="card card-pad" style="text-align:center;padding:64px 20px">
-        <div style="color:var(--muted);margin-bottom:12px">${ic('book', 'icon-lg')}</div>
-        <h3 style="font-size:16px;font-weight:600">No guides found</h3>
-        <p class="muted" style="font-size:13px;margin-top:6px">Try adjusting your search query or category filter.</p>
       </div>
     `;
   }
 
+  // Design system dropdown options
+  const guideOptions = guides.map(g => ({
+    v: g.id,
+    label: g.title,
+    sub: `${g.category} · ${g.readTime}`
+  }));
+
+  const topicDropdown = selectBox('guideTopicSelect', guideOptions, activeGuide.id, (chosenId) => {
+    S.selectedGuideId = chosenId;
+    if (window.render) window.render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  const currentIndex = guides.findIndex(g => g.id === activeGuide.id);
+  const prevGuide = currentIndex > 0 ? guides[currentIndex - 1] : null;
+  const nextGuide = currentIndex < guides.length - 1 ? guides[currentIndex + 1] : null;
+
   return `
-    <div class="page-head" style="margin-bottom:18px">
-      <div>
-        <h1 style="font-size:23px;font-weight:600;letter-spacing:-.02em">KBridge Documentation &amp; User Guides</h1>
-        <p class="muted" style="font-size:13.5px;margin-top:4px">Built-in operational guides for capital minting, legal promissory note signing, and Kunda Box administration fees.</p>
-      </div>
-      <div>
-        ${adminShortcut}
-      </div>
-    </div>
-
-    <!-- Search & Category Filters -->
-    <div class="guide-topbar">
-      <div class="guide-search-wrap">
-        <span class="guide-search-icon">${ic('search', 'icon-xs')}</span>
-        <input type="text" class="input guide-search-input" id="guideSearchInput" placeholder="Search operational guides, formulas, or terms…" value="${esc(S.guideQuery || '')}">
-      </div>
-      <div class="guide-cat-scroll">
-        ${categoryPills}
-      </div>
-    </div>
-
-    <!-- Two-Column Layout: Guide Directory & Rich Article View -->
-    <div class="guide-layout">
-      <!-- Sidebar Navigation Menu -->
-      <div class="guide-sidebar">
-        <div class="guide-sidebar-head">
-          <span>Documentation Articles</span>
-          <span class="guide-count">${filtered.length}</span>
+    <div class="guide-calm-wrap fadein">
+      <!-- Calm, Reassuring Header -->
+      <div style="text-align:center;margin-bottom:28px">
+        <div style="display:inline-flex;align-items:center;gap:6px;padding:3px 12px;border-radius:999px;background:#fff;border:1px solid var(--line);font-size:11.5px;font-weight:600;color:var(--muted);box-shadow:var(--shadow-xs);margin-bottom:10px">
+          ${ic('book', 'icon-xs')} Protocol Guide &amp; Walkthrough
         </div>
-        <div class="guide-sidebar-list">
-          ${guideListHtml || '<div class="muted" style="padding:20px;font-size:12.5px;text-align:center">No articles found</div>'}
-        </div>
+        <h1 style="font-size:24px;font-weight:600;letter-spacing:-.02em;color:var(--ink)">
+          ${esc(activeGuide.title)}
+        </h1>
+        <p class="muted" style="font-size:13.5px;margin-top:6px;max-width:540px;margin-left:auto;margin-right:auto;line-height:1.55">
+          Step-by-step documentation to help you understand how capital allocation, promissory notes, and token settlements work smoothly on KBridge.
+        </p>
       </div>
 
-      <!-- Main Reader Display -->
-      <div class="guide-main">
-        ${readerHtml}
+      <!-- Focused Reading Card -->
+      <div class="guide-calm-card">
+        <!-- Simple Dropdown Menu to switch topics -->
+        <div style="margin-bottom:20px">
+          <label class="field" style="margin:0">
+            <span style="font-size:11px;font-weight:600;color:var(--faint);letter-spacing:0.06em;text-transform:uppercase">Choose Guide Topic</span>
+            ${topicDropdown}
+          </label>
+        </div>
+
+        <!-- Serene, clear Description -->
+        <div class="guide-desc-box">
+          <div class="row between" style="align-items:center;margin-bottom:8px">
+            <span class="micro" style="color:var(--muted)">Overview</span>
+            <span class="mono" style="font-size:11.5px;color:var(--faint)">${esc(activeGuide.category)} · ${esc(activeGuide.readTime)} · Updated ${esc(activeGuide.lastUpdated)}</span>
+          </div>
+          <p class="guide-desc-text">
+            ${esc(activeGuide.excerpt)}
+          </p>
+        </div>
+
+        <!-- Smooth, distraction-free Guide Prose -->
+        <div class="guide-prose">
+          ${activeGuide.content}
+        </div>
+
+        <!-- Previous / Next Tranquil Navigation -->
+        <div class="guide-footer-nav between" style="margin-top:40px;padding-top:24px;border-top:1px solid var(--line);flex-wrap:wrap;gap:12px">
+          <div>
+            ${prevGuide ? `
+              <button class="btn btn-quiet btn-sm" data-act="guide-select" data-id="${prevGuide.id}" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--line);background:#FAFAF8;border-radius:var(--r)">
+                ${ic('back', 'icon-xs')} <span class="muted" style="font-size:12px">Previous:</span> <span style="font-weight:600;font-size:12.5px">${esc(prevGuide.title.length > 28 ? prevGuide.title.slice(0, 28) + '…' : prevGuide.title)}</span>
+              </button>
+            ` : '<span></span>'}
+          </div>
+          <div>
+            ${nextGuide ? `
+              <button class="btn btn-quiet btn-sm" data-act="guide-select" data-id="${nextGuide.id}" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--line);background:#FAFAF8;border-radius:var(--r)">
+                <span class="muted" style="font-size:12px">Next:</span> <span style="font-weight:600;font-size:12.5px">${esc(nextGuide.title.length > 28 ? nextGuide.title.slice(0, 28) + '…' : nextGuide.title)}</span> ${ic('chev', 'icon-xs')}
+              </button>
+            ` : '<span></span>'}
+          </div>
+        </div>
+
+        ${S.org === 'kbridge' ? `
+          <div style="text-align:center;margin-top:24px;padding-top:16px;border-top:1px solid var(--line-soft)">
+            <button class="btn btn-quiet btn-xs" data-act="view" data-view="guides-admin" style="font-size:11.5px;color:var(--muted)">
+              ${ic('pencil', 'icon-xs')} Open in Guide CMS (Admin)
+            </button>
+          </div>
+        ` : ''}
       </div>
     </div>
   `;

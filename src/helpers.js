@@ -199,3 +199,27 @@ export function renderPaginationControls(currentPage, totalItems, perPage, actNa
     </div>
   `;
 }
+
+export const SELS = {};
+export function selectBox(id, options, value, onPick){
+  SELS[id] = { options, value, onPick };
+  const cur = options.find(o => o.v === value) || options[0] || {label:'—'};
+  return `<div class="sel" data-sel="${id}">
+    <button class="sel-btn" type="button" data-act="sel-open" data-id="${id}">
+      <span class="stack" style="min-width:0;text-align:left">
+        <span class="sel-lab">${cur.label}</span>
+        ${cur.sub ? '<span class="sel-sub mono">'+cur.sub+'</span>' : ''}
+      </span>
+      ${ic('chevd','icon-sm')}
+    </button>
+    <div class="sel-menu hide" data-menu="${id}">
+      ${options.map(o => `<button class="sel-opt ${o.v===value?'sel-on':''}" type="button" data-act="sel-pick" data-id="${id}" data-v="${o.v}">
+        <span class="stack" style="min-width:0;text-align:left">
+          <span class="sel-lab">${o.label}</span>
+          ${o.sub ? '<span class="sel-sub mono">'+o.sub+'</span>' : ''}
+        </span>
+        <span class="sel-tick">${ic('check','icon-sm')}</span>
+      </button>`).join('')}
+    </div>
+  </div>`;
+}
